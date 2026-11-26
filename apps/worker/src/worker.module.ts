@@ -1,0 +1,36 @@
+import { type DynamicModule, Module } from '@nestjs/common';
+import {
+  AppConfigModule,
+  DatabaseModule,
+  LoggingModule,
+  QueueModule,
+  RedisModule,
+  type WorkerEnv,
+} from '@lga/core';
+import { HealthServer } from './health/health-server.js';
+import { WorkerHealthService } from './health/worker-health.service.js';
+import { HeartbeatProcessor } from './processors/heartbeat.processor.js';
+import { WorkerRuntime } from './runtime/worker-runtime.js';
+
+@Module({})
+export class WorkerModule {
+  static forRoot(env: WorkerEnv, options: { healthServer?: boolean } = {}): DynamicModule {
+    return {
+      module: WorkerModule,
+      imports: [
+        AppConfigModule.forRoot(env),
+        LoggingModule.forRoot('worker'),
+        DatabaseModule.forRoot(),
+        RedisModule.forRoot(),
+        QueueModule.forRoot(),
+      ],
+      providers: [
+        HeartbeatProcessor,
+        WorkerRuntime,
+        WorkerHealthService,
+        ...(options.healthServer === false ? [] : [HealthServer]),
+      ],
+      exports: [WorkerHealthService, WorkerRuntime],
+    };
+  }
+}

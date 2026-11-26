@@ -1,0 +1,41 @@
+# Production TLS server blocks (Let's Encrypt via certbot webroot). Replace example domains.
+# Mount certificates read-only and include this instead of the HTTP-only `server` in nginx.conf.
+#
+#   certbot certonly --webroot -w /var/www/certbot -d app.example.com -d links.example-links.com
+
+server {
+  listen 80;
+  server_name app.example.com links.example-links.com;
+  location /.well-known/acme-challenge/ { root /var/www/certbot; }
+  location / { return 301 https://$host$request_uri; }
+}
+
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name app.example.com;
+
+  ssl_certificate     /etc/letsencrypt/live/app.example.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/app.example.com/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  ssl_session_cache shared:SSL:10m;
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  # ...same headers and locations as the HTTP server in nginx.conf...
+}
+
+# Links domain: unsubscribe (and future click redirects) only (ADR-0015).
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name links.example-links.com;
+  ssl_certificate     /etc/letsencrypt/live/links.example-links.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/links.example-links.com/privkey.pem;
+  add_header Strict-Transport-Security "max-age=31536000" always;
+
+  location /u/ { proxy_pass http://api; }
+  location / { return 404; }
+}

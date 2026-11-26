@@ -1,0 +1,34 @@
+{
+  "name": "@lga/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Isomorphic, framework-free utilities used by web, api and worker.",
+  "exports": {
+    ".": {
+      "@lga/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node ../../infra/scripts/dev-node.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@lga/config": "workspace:*",
+    "@types/node": "24.19.4",
+    "eslint": "9.39.5",
+    "typescript": "6.0.3",
+    "vitest": "5.1.2"
+  }
+}

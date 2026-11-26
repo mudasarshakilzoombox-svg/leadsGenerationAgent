@@ -1,0 +1,10 @@
+{
+  "extends": "@lga/config/tsconfig/node.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noEmit": true,
+    "customConditions": ["@lga/source"]
+  },
+  "include": ["src", "prisma.config.ts", "vitest.config.ts"]
+}

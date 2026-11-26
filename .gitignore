@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated code
+packages/core/src/generated/
+
+# Tooling
+.turbo/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Environment and secrets: never commit real values
+.env
+.env.*
+!.env.example
+*.pem
+*.key

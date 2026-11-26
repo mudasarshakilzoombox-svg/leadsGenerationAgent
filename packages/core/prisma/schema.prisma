@@ -1,0 +1,14 @@
+// Prisma schema. Tables are added per roadmap phase (see docs/DATABASE_DESIGN.md).
+// Conventions: PascalCase models mapped to snake_case plural tables, UUIDv7 ids,
+// timestamptz columns, workspace_id + composite FKs on tenant tables (ADR-0006, ADR-0020).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

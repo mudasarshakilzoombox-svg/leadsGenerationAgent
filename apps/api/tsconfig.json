@@ -1,0 +1,8 @@
+{
+  "extends": "@lga/config/tsconfig/nest.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "customConditions": ["@lga/source"]
+  },
+  "include": ["src", "test", "vitest.config.ts", "vitest.integration.config.ts"]
+}

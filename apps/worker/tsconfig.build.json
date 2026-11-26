@@ -1,0 +1,8 @@
+{
+  "extends": "@lga/config/tsconfig/nest.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"]
+}
