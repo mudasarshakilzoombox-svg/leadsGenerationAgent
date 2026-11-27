@@ -5,7 +5,7 @@ import type { ApiEnv } from '../../../config/env.js';
 import { PrismaService } from '../../../database/prisma.service.js';
 import { valkeyKey } from '../../../queue/jobs.js';
 import { REDIS } from '../../../redis/redis.module.js';
-import type { RequestMeta } from '../../audit/audit.service.js';
+import type { RequestMeta } from '../../audit/index.js';
 import { generateToken, hashSessionToken } from '../domain/identity.js';
 import { SESSION_TTL } from '../domain/token-ttl.js';
 

@@ -3,8 +3,8 @@ import type { ChangePasswordRequest, UpdateProfileRequest } from '@lga/contracts
 import { PrismaService } from '../../../database/prisma.service.js';
 import { DomainError } from '../../../errors/domain-error.js';
 import { RateLimiter } from '../../../platform/rate-limit/rate-limiter.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
-import { NotificationDispatcher } from '../../notifications/notification-dispatcher.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
+import { NotificationDispatcher } from '../../notifications/index.js';
 import { generateToken, hashToken, normalizeEmail } from '../domain/identity.js';
 import { AUTH_TOKEN_TTL } from '../domain/token-ttl.js';
 import { PasswordHasher } from '../infrastructure/password-hasher.js';

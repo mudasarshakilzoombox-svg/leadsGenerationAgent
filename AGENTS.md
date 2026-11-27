@@ -4,9 +4,9 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (auth pages, admin shell, real read-only data, ADR-0035) uses a project-scoped, Explee-style shell: project switcher, campaigns in the sidebar, Performance dashboard, Sent and Email sequences pages (ADR-0036). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). The AI layer is in place in `packages/core/src/platform/ai/` (ADR-0037): `AiGateway` (Anthropic + OpenAI + fake adapters, routing and pricing config, structured output with one repair, fallback, circuit breaker), `AiActionPipeline` (AIC checks, credit hook, action gates) and `ai_runs` metering. Google and Microsoft sign-in (AUTH-03, with a fake identity provider in fake mode) and profile settings (AUTH-06: name, time zone, password, email change with revert) are implemented. Workspace settings with ETag/If-Match (WS-06), delete with a 30-day restore and the batched `workspace.purge` (WS-07), the reconciler framework on the `maintenance` queue and Bull Board at `/admin/queues` (Super Admin + `ADMIN_IP_ALLOWLIST`) are implemented (ADR-0038). Next in Phase 0: developer tooling and the quality gate (P0.5, `docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (auth pages, admin shell, real read-only data, ADR-0035) uses a project-scoped, Explee-style shell: project switcher, campaigns in the sidebar, Performance dashboard, Sent and Email sequences pages (ADR-0036). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). The AI layer is in place in `packages/core/src/platform/ai/` (ADR-0037): `AiGateway` (Anthropic + OpenAI + fake adapters, routing and pricing config, structured output with one repair, fallback, circuit breaker), `AiActionPipeline` (AIC checks, credit hook, action gates) and `ai_runs` metering. Google and Microsoft sign-in (AUTH-03, with a fake identity provider in fake mode) and profile settings (AUTH-06: name, time zone, password, email change with revert) are implemented. Workspace settings with ETag/If-Match (WS-06), delete with a 30-day restore and the batched `workspace.purge` (WS-07), the reconciler framework on the `maintenance` queue and Bull Board at `/admin/queues` (Super Admin + `ADMIN_IP_ALLOWLIST`) are implemented (ADR-0038). Quality gates are in place (ADR-0039): dependency-cruiser boundaries plus a table-ownership check, Renovate, gitleaks (pre-commit and CI), OpenAPI generated from the contracts (`/api/docs`, `docs/api/openapi.json`), and Playwright end-to-end plus axe checks on three viewports in CI. Next in Phase 0: the deploy pipeline (P0.6, `docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
-- Run `pnpm check` and `pnpm test:integration` before declaring work done.
+- Run `pnpm check` and `pnpm test:integration` before declaring work done. For UI changes, also run `pnpm e2e` against `pnpm dev`.
 
 ## What we are building
 
@@ -66,6 +66,11 @@ pnpm db:migrate              # create a migration (prisma migrate dev) in packag
 pnpm stack:build && pnpm stack:up && pnpm stack:smoke   # production-like Docker stack
 pnpm ai:eval <task> [--provider fake|anthropic|openai]   # golden-case eval (real providers only when you run it)
 pnpm ai:selftest             # enqueue one ai.selftest job for the running worker
+pnpm boundaries              # module boundaries, layer purity, web/server split, table ownership
+pnpm secrets:scan            # gitleaks over the git history (Docker image if no local gitleaks)
+pnpm openapi                 # regenerate docs/api/openapi.json (CI fails when stale)
+pnpm e2e                     # Playwright + axe against the running stack (pnpm e2e:install once)
+pnpm dev:stop                # stop leftover dev processes of this repo (Windows orphans)
 ```
 
 Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@lga/core`.
@@ -74,7 +79,7 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 
 1. **Modular monolith.** No new services, processes or databases without an approved decision-log entry.
 2. **Next.js never touches the database, Valkey, LLMs or secret-bearing provider APIs.** All business logic lives in NestJS. Server Components call the API over the internal network.
-3. **Module boundaries:** import another module only via its `index.ts`. Never import another module's repositories or Prisma models directly. Each table has exactly one owning module (DATABASE_DESIGN.md §3).
+3. **Module boundaries:** import another module only via its `index.ts` (or its pure `domain/index.ts`). Never import another module's repositories or Prisma models directly. Each table has exactly one owning module (DATABASE_DESIGN.md §3, `MODEL_OWNERS` in `packages/core/src/tenancy/model-owners.ts`). Every new core module needs an `index.ts`, and every new model needs an owner. `pnpm boundaries` enforces both (ADR-0039).
 4. **No cycles:** if a downstream module must react, emit a domain event (`@nestjs/event-emitter`) or enqueue a job.
 5. **PostgreSQL is the source of truth.** Every async workflow has a DB status. Enqueue *after* commit. Processors must be idempotent. Never store business state only in Redis/Valkey.
 6. **Job payloads carry IDs only.** No PII, message bodies or secrets in jobs.

@@ -5,7 +5,7 @@ import { PrismaService } from '../../../database/prisma.service.js';
 import { DomainError } from '../../../errors/domain-error.js';
 import type { WorkspaceStatus } from '../../../generated/prisma/client.js';
 import type { WorkspaceAccess } from '../../../tenancy/workspace-access.service.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
 import {
   WORKSPACE_LIFECYCLE_HOOKS,
   type WorkspaceLifecycleHooks,

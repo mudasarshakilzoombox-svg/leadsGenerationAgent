@@ -12,8 +12,8 @@ import { PLANS } from '../../../platform/billing/plans.js';
 import { RateLimiter } from '../../../platform/rate-limit/rate-limiter.js';
 import { resolvePermissions } from '../../../platform/tenancy/permissions.js';
 import { parseWorkspaceSettings } from '../../../tenancy/workspace-settings.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
-import { slugify } from '../../identity/domain/identity.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
+import { slugify } from '../../identity/index.js';
 
 const CREATE_LIMIT = { scope: 'ws:create:user', limit: 5, windowSeconds: 24 * 60 * 60 } as const;
 

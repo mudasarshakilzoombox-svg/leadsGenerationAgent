@@ -14,8 +14,8 @@ import { DomainError } from '../../../errors/domain-error.js';
 import { type IdentityProvider, Prisma } from '../../../generated/prisma/client.js';
 import { RateLimiter } from '../../../platform/rate-limit/rate-limiter.js';
 import { SignedTokens } from '../../../security/signed-token.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
-import { NotificationDispatcher } from '../../notifications/notification-dispatcher.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
+import { NotificationDispatcher } from '../../notifications/index.js';
 import { generateToken, hashToken, maskEmail, normalizeEmail } from '../domain/identity.js';
 import { AUTH_TOKEN_TTL } from '../domain/token-ttl.js';
 import {

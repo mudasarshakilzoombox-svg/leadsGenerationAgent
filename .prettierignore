@@ -11,3 +11,4 @@ docs
 
 # Local AI eval reports (pnpm ai:eval)
 packages/core/test/ai-evals/reports/
+docs/api/openapi.json

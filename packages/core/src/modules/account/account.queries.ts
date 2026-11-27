@@ -4,7 +4,7 @@ import type { Billing, Integrations } from '@lga/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { isPlanKey, PLAN_KEYS, PLANS } from '../../platform/billing/plans.js';
 import type { WorkspaceAccess } from '../../tenancy/workspace-access.service.js';
-import { SeatPolicy } from '../workspaces/application/seat-policy.js';
+import { SeatPolicy } from '../workspaces/index.js';
 
 @Injectable()
 export class AccountQueries {

@@ -7,6 +7,12 @@
 - **REST over HTTPS, JSON** (`application/json; charset=utf-8`). Resource-oriented paths, kebab-case (`/campaign-approvals`), camelCase fields.
 - **Base:** `https://app.<domain>/api/v1`. Tenant resources: `/api/v1/workspaces/:workspaceId/...`. Platform admin: `/api/v1/admin/...`. Public: `/u/:token`, `/webhooks/:provider`, `/health/*` (not versioned).
 - **Contracts:** Zod schemas in `packages/contracts/<domain>.ts` define every request body, query, params and response. OpenAPI 3.1 is generated from them (non-production only, at `/api/docs`). The web app imports the same schemas, so no code generation is needed.
+  - *As implemented (P0.5, ADR-0039):* `apps/api/src/openapi/`:
+    - `route-table.ts` reads routes and security facts from the Nest metadata;
+    - `registry.ts` maps each route to its contract schemas;
+    - `document.ts` builds the document with Zod 4's `z.toJSONSchema`.
+    - It is served at `/api/docs` (a Scalar page) and `/api/docs/openapi.json`, and exported to `docs/api/openapi.json`.
+    - A unit test fails when a route is undocumented, and CI fails when the exported file is stale.
 
 ## 2. Data conventions
 

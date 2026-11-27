@@ -6,7 +6,7 @@
 ARG NODE_IMAGE=node:24-alpine
 
 FROM ${NODE_IMAGE} AS base
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true \
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true SKIP_INSTALL_SIMPLE_GIT_HOOKS=1 \
     npm_config_fetch_retries=5 npm_config_fetch_retry_mintimeout=10000 \
     npm_config_fetch_retry_maxtimeout=120000 npm_config_network_concurrency=8
 RUN npm install -g pnpm@10.34.9 --no-fund --no-audit

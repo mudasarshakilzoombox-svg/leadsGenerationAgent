@@ -1,0 +1,34 @@
+# Secret scanning (SECURITY.md "never commit secrets", ADR-0039).
+# Default gitleaks rules plus narrow allowlists for values that are placeholders by design.
+# Run locally with `pnpm secrets:scan`; CI scans the full history; the pre-commit hook scans
+# staged changes. Never widen an allowlist to silence a real finding: rotate the secret instead.
+
+title = "Lead Generation Agent"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented placeholders and CI-only test keys"
+regexTarget = "match"
+regexes = [
+  # .env.example / setup script placeholders, replaced by `pnpm setup`.
+  '''change-me-[a-z0-9-]+''',
+  # CI-only key rings in ci.yml: all-zero / all-one bytes, never used outside tests.
+  '''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=''',
+  '''AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=''',
+  '''ci-only-[a-z0-9-]+''',
+  # Shared dev-seed password for the disposable local database.
+  '''lga-local-dev-password''',
+]
+
+[[allowlists]]
+description = "Generated output, lockfiles and test fixtures with synthetic tokens"
+paths = [
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)(dist|\.next|node_modules|coverage|playwright-report|test-results)/''',
+  '''(^|/)src/generated/''',
+  '''\.test\.tsx?$''',
+  '''\.int\.test\.ts$''',
+  '''(^|/)docs/api/openapi\.json$''',
+]

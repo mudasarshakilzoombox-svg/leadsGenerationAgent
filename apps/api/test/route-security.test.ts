@@ -1,36 +1,8 @@
 // Route-table security check (threat model TM-01): every route is either explicitly @Public() or
 // session-guarded (global default), every /workspaces/:workspaceId route runs TenantGuard, and
 // every mutating tenant route declares @RequirePermission() or @SelfService().
-import 'reflect-metadata';
-import { RequestMethod } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
-import { AuthController } from '../src/auth/auth.controller.js';
-import { OAuthController } from '../src/auth/oauth.controller.js';
-import { ProfileController } from '../src/auth/profile.controller.js';
-import { DashboardController } from '../src/dashboard/dashboard.controller.js';
-import { IS_PUBLIC, REQUIRED_PERMISSIONS, SELF_SERVICE } from '../src/auth/request-context.js';
-import { TenantGuard } from '../src/auth/tenant.guard.js';
-import { HealthController } from '../src/health/health.controller.js';
-import { SystemController } from '../src/system/system.controller.js';
-import {
-  InvitationAcceptController,
-  InvitationsController,
-  MembersController,
-  WorkspacesController,
-} from '../src/workspaces/workspaces.controller.js';
-
-const CONTROLLERS = [
-  AuthController,
-  OAuthController,
-  ProfileController,
-  WorkspacesController,
-  MembersController,
-  InvitationsController,
-  InvitationAcceptController,
-  DashboardController,
-  HealthController,
-  SystemController,
-];
+import { apiRoutes } from '../src/openapi/route-table.js';
 
 /** Routes that are intentionally reachable without a session. */
 const EXPECTED_PUBLIC = [
@@ -58,50 +30,8 @@ const EXPECTED_PUBLIC = [
   'GET system/info',
 ].sort();
 
-interface Route {
-  key: string;
-  method: string;
-  path: string;
-  isPublic: boolean;
-  tenantGuarded: boolean;
-  declaresPermission: boolean;
-}
-
-function meta<T>(key: string, target: object): T | undefined {
-  return Reflect.getMetadata(key, target) as T | undefined;
-}
-
-function routes(): Route[] {
-  return CONTROLLERS.flatMap((controller) => {
-    const base = String(meta<string>('path', controller) ?? '').replace(/^\/|\/$/g, '');
-    const classGuards = meta<unknown[]>('__guards__', controller) ?? [];
-    return Object.getOwnPropertyNames(controller.prototype)
-      .filter((name) => name !== 'constructor')
-      .map((name) => (controller.prototype as unknown as Record<string, object>)[name]!)
-      .filter((handler) => meta('path', handler) !== undefined)
-      .map((handler) => {
-        const method = RequestMethod[meta<number>('method', handler) ?? 0]!;
-        const sub = String(meta<string>('path', handler)).replace(/^\/|\/$/g, '');
-        const path = [base, sub].filter(Boolean).join('/');
-        const guards = [...classGuards, ...(meta<unknown[]>('__guards__', handler) ?? [])];
-        return {
-          key: `${method} ${path}`,
-          method,
-          path,
-          isPublic: Boolean(meta(IS_PUBLIC, handler) ?? meta(IS_PUBLIC, controller)),
-          tenantGuarded: guards.includes(TenantGuard),
-          declaresPermission: Boolean(
-            meta(REQUIRED_PERMISSIONS, handler) ??
-            meta(REQUIRED_PERMISSIONS, controller) ??
-            meta(SELF_SERVICE, handler),
-          ),
-        };
-      });
-  });
-}
-
 describe('route security table', () => {
-  const all = routes();
+  const all = apiRoutes();
 
   it('discovers the routes', () => {
     expect(all.length).toBeGreaterThan(20);

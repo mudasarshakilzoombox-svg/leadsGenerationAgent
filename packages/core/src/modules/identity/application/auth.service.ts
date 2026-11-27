@@ -6,8 +6,8 @@ import { PrismaService } from '../../../database/prisma.service.js';
 import { DomainError } from '../../../errors/domain-error.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { RateLimiter, type RateLimitRule } from '../../../platform/rate-limit/rate-limiter.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
-import { NotificationDispatcher } from '../../notifications/notification-dispatcher.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
+import { NotificationDispatcher } from '../../notifications/index.js';
 import {
   deviceKey,
   emailKey,

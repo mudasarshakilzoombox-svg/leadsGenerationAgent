@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '24'
   TURBO_TELEMETRY_DISABLED: '1'
   NEXT_TELEMETRY_DISABLED: '1'
 
@@ -65,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install
@@ -77,14 +76,23 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Module boundaries, layer purity, web/server separation and table ownership (ADR-0039).
+      - name: Architecture boundaries
+        run: pnpm boundaries
+
+      # docs/api/openapi.json must match the contracts and the route table (03-api §1).
+      - name: OpenAPI drift
+        run: pnpm --filter @lga/api openapi:check
+
+      # CI runners have room for full parallelism; the root scripts cap it at 2 for laptops.
       - name: Lint
-        run: pnpm lint
+        run: pnpm exec turbo run lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm exec turbo run typecheck
 
       - name: Unit tests
-        run: pnpm test
+        run: pnpm exec turbo run test
 
       # Keeps the eval harness itself working; real-provider evals run manually (ADR-0031, ADR-0037).
       - name: AI eval harness (fake provider)
@@ -98,6 +106,113 @@ jobs:
 
       - name: Dependency audit (high and critical)
         run: pnpm audit --audit-level high --prod
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the whole history, not just this commit
+
+      # Pinned gitleaks image via the same script developers run (pnpm secrets:scan).
+      - name: Scan the git history
+        run: node infra/scripts/secrets-scan.mjs
+
+  e2e:
+    name: End-to-end and accessibility (Playwright)
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: lga
+          POSTGRES_USER: lga_owner
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lga_owner -d lga"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+
+    env:
+      APP_ENV: test
+      NODE_ENV: production
+      LOG_LEVEL: warn
+      INTEGRATIONS_MODE: fake
+      APP_ORIGIN: http://localhost:3300
+      INTERNAL_API_URL: http://localhost:4000
+      E2E_BASE_URL: http://localhost:3300
+      DATABASE_URL: postgresql://lga_owner:ci-only-password@localhost:5432/lga
+      DATABASE_MIGRATOR_URL: postgresql://lga_owner:ci-only-password@localhost:5432/lga
+      VALKEY_URL: redis://localhost:6379/0
+      SESSION_PEPPER: ci-only-session-pepper-not-a-secret-0001
+      EMAIL_HASH_PEPPER: ci-only-email-pepper-not-a-secret-00001
+      APP_ENCRYPTION_KEYS: '{"1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+      APP_ENCRYPTION_ACTIVE_VERSION: '1'
+      UNSUBSCRIBE_TOKEN_KEYS: '{"1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+      UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Built once (INTERNAL_API_URL is baked into the web app's /api rewrite), then served.
+      - name: Build
+        run: pnpm build
+
+      - name: Database
+        run: pnpm db:deploy && pnpm db:seed
+
+      - name: Start the built stack
+        run: |
+          (cd apps/api && node dist/main.js > ../../api.log 2>&1 &)
+          (cd apps/worker && node dist/main.js > ../../worker.log 2>&1 &)
+          (cd apps/web && node scripts/next.mjs start > ../../web.log 2>&1 &)
+          for url in http://localhost:4000/health/ready http://localhost:4100/health/ready http://localhost:3300/login; do
+            timeout 120 bash -c "until curl -sf $url > /dev/null; do sleep 2; done" || { echo "not ready: $url"; exit 1; }
+          done
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: pnpm --filter @lga/web exec playwright install --with-deps chromium
+
+      - name: Playwright (Desktop Chrome, Pixel 7, iPhone 14) + axe
+        run: pnpm e2e
+
+      - name: Upload report and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            *.log
+          retention-days: 7
 
   docker:
     name: Docker images

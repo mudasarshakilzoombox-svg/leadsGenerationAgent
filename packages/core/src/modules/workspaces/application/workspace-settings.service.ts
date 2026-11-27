@@ -12,7 +12,7 @@ import { staleVersion } from '../../../platform/http/etag.js';
 import { resolvePermissions } from '../../../platform/tenancy/permissions.js';
 import type { WorkspaceAccess } from '../../../tenancy/workspace-access.service.js';
 import { parseWorkspaceSettings } from '../../../tenancy/workspace-settings.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
 import { launchReadiness } from '../domain/launch-readiness.js';
 import { toWorkspaceSummary } from './workspace.service.js';
 

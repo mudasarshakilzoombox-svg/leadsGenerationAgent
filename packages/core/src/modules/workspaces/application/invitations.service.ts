@@ -11,17 +11,17 @@ import { DomainError } from '../../../errors/domain-error.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { RateLimiter } from '../../../platform/rate-limit/rate-limiter.js';
 import type { WorkspaceAccess } from '../../../tenancy/workspace-access.service.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
 import {
+  type ActiveSession,
+  AUTH_TOKEN_TTL,
   generateToken,
   hashToken,
   maskEmail,
   normalizeEmail,
-} from '../../identity/domain/identity.js';
-import { AUTH_TOKEN_TTL } from '../../identity/domain/token-ttl.js';
-import { SessionService } from '../../identity/application/session.service.js';
-import type { ActiveSession } from '../../identity/application/session.service.js';
-import { NotificationDispatcher } from '../../notifications/notification-dispatcher.js';
+  SessionService,
+} from '../../identity/index.js';
+import { NotificationDispatcher } from '../../notifications/index.js';
 import { seatLockKey, SeatPolicy } from './seat-policy.js';
 import { WorkspaceService } from './workspace.service.js';
 
@@ -306,6 +306,7 @@ export class InvitationsService {
           });
         }
         // Receiving the link proves control of the address.
+        // ownership-exempt: WS-03 accepting proves email control, same transaction
         await tx.user.updateMany({
           where: { id: session.userId, emailVerifiedAt: null },
           data: { emailVerifiedAt: now },

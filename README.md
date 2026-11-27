@@ -67,7 +67,8 @@ docs/         product, architecture, ADRs
 | `pnpm lint` / `pnpm typecheck` | ESLint (type-aware) / TypeScript, all packages |
 | `pnpm test` | Unit tests (no infrastructure needed) |
 | `pnpm test:integration` | Core (tenant isolation, constraints, seed), API and worker against real PostgreSQL + Valkey (`pnpm infra:up` and `pnpm db:deploy` first) |
-| `pnpm check` | format check + lint + typecheck + unit tests |
+| `pnpm check` | format check + boundaries + lint + typecheck + unit tests (lint/typecheck/test run 2 packages at a time to fit an 8 GB laptop) |
+| `pnpm dev:stop` | Stop leftover dev processes of this repo (`--dry-run` lists them). Matches by repo path and dev ports, never by name alone |
 | `pnpm format` | Prettier |
 | `pnpm db:migrate` | Create/apply a migration in development (`prisma migrate dev`) |
 | `pnpm db:deploy` / `pnpm db:status` | Apply pending migrations / show status |
@@ -77,6 +78,19 @@ docs/         product, architecture, ADRs
 | `pnpm stack:build` / `stack:up` / `stack:smoke` / `stack:down` | Full production-like Docker stack behind nginx on http://localhost:8080 |
 
 `pnpm infra:reset` deletes local database and Valkey data. Only run it on purpose.
+
+## Quality gates (ADR-0039)
+
+| Command | What it checks |
+|---------|----------------|
+| `pnpm boundaries` | dependency-cruiser (`.dependency-cruiser.cjs`): modules import each other only through `index.ts`; `domain/` stays pure; the Prisma client stays in the data layer; the web app never imports backend packages; contracts/shared/ui stay isomorphic; no import cycles. Plus `infra/scripts/check-ownership.mjs`: only a table's owning module writes it (`MODEL_OWNERS`) |
+| `pnpm secrets:scan` | gitleaks over the whole git history (`--staged` for staged changes), with a local `gitleaks` or the pinned Docker image |
+| `pnpm openapi` | Regenerates `docs/api/openapi.json` from the contracts. CI fails when it is stale. Browse it at http://localhost:4000/api/docs (non-production) |
+| `pnpm e2e` | Playwright against the running stack (`pnpm dev` first; `E2E_BASE_URL` to target another): auth + dashboard flows and axe accessibility checks on Desktop Chrome, Pixel 7 and iPhone 14 viewports (Chromium). `pnpm e2e:install` once for the browser, `pnpm e2e:ui` to debug |
+
+**One-time setup:**
+- **Secret scanning before each commit:** install gitleaks (`winget install gitleaks` or `brew install gitleaks`). The pre-commit hook installed by `pnpm install` then blocks commits that stage a secret. Without it the hook only warns; CI still scans every push.
+- **Dependency updates:** install the free Renovate GitHub App on the repository (https://github.com/apps/renovate). `renovate.json` opens weekly grouped PRs, waits 14 days after a release and never auto-merges.
 
 ## How the foundation fits together
 
@@ -89,4 +103,8 @@ docs/         product, architecture, ADRs
 
 ## CI
 
-`.github/workflows/ci.yml` runs format check, build, lint, typecheck, unit tests, migrations and integration tests (PostgreSQL + Valkey services), a dependency audit, and Docker builds for all images.
+`.github/workflows/ci.yml` runs:
+- **verify:** format check, build, architecture boundaries, OpenAPI drift, lint, typecheck, unit tests, migrations and integration tests (PostgreSQL + Valkey services), and a dependency audit;
+- **secrets:** gitleaks over the full history;
+- **e2e:** the built stack started once, then Playwright and axe on three viewports;
+- **docker:** builds of all images.

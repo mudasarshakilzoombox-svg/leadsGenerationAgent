@@ -7,8 +7,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { watch } from 'chokidar';
+import { watchPids } from './exit-with-parent.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const cwd = process.cwd();
@@ -16,6 +18,15 @@ const require = createRequire(path.join(root, 'package.json'));
 const swcBin = path.join(path.dirname(require.resolve('@swc/cli/package.json')), 'bin', 'swc.js');
 const swcConfig = path.join(root, 'packages/config/swc/node.swcrc');
 const { values } = parseArgs({ options: { run: { type: 'string' } } });
+
+// Children exit when this launcher dies, and this launcher exits when its own parent (turbo/pnpm)
+// dies, so stopping `pnpm dev` never leaves orphans on Windows (ADR-0039).
+const exitWithParent = [
+  '--import',
+  pathToFileURL(path.join(root, 'infra/scripts/exit-with-parent.mjs')).href,
+];
+const childEnv = { ...process.env, LGA_PARENT_PID: String(process.pid) };
+watchPids([process.ppid, Number(process.env.LGA_DEV_ROOT_PID)], () => shutdown(0));
 
 const swcArgs = [
   swcBin,
@@ -29,12 +40,25 @@ const swcArgs = [
   '**/*.test.ts',
 ];
 
-// 1. Initial compile so dist/ is complete before anything runs.
-const initial = spawnSync(process.execPath, swcArgs, { stdio: 'inherit' });
+// 1. Initial compile so dist/ is complete before anything runs. On Windows a freshly written
+//    file can be briefly locked (antivirus scan, a watcher), so SWC's rename fails with EPERM;
+//    retry a couple of times before giving up (ADR-0039).
+let initial;
+for (let attempt = 1; attempt <= 3; attempt++) {
+  initial = spawnSync(process.execPath, swcArgs, { stdio: 'inherit' });
+  if (initial.status === 0) break;
+  if (attempt < 3) {
+    console.warn(`[dev-node] initial compile failed (attempt ${attempt}/3), retrying...`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500 * attempt);
+  }
+}
 if (initial.status !== 0) process.exit(initial.status ?? 1);
 
 let stopping = false;
-const swc = spawn(process.execPath, [...swcArgs, '--watch', '--quiet'], { stdio: 'inherit' });
+const swc = spawn(process.execPath, [...exitWithParent, ...swcArgs, '--watch', '--quiet'], {
+  stdio: 'inherit',
+  env: childEnv,
+});
 swc.on('exit', (code) => {
   if (!stopping) {
     console.error(`[dev-node] swc watcher exited with code ${code}`);
@@ -48,13 +72,14 @@ if (values.run) {
   const entry = values.run;
   const envFile = path.join(root, '.env');
   const nodeArgs = [
+    ...exitWithParent,
     '--enable-source-maps',
     ...(existsSync(envFile) ? [`--env-file-if-exists=${envFile}`] : []),
     entry,
   ];
 
   const startApp = () => {
-    app = spawn(process.execPath, nodeArgs, { stdio: 'inherit', env: process.env });
+    app = spawn(process.execPath, nodeArgs, { stdio: 'inherit', env: childEnv });
     const current = app;
     current.on('exit', (code, signal) => {
       if (current === app && !stopping && !restarting) {

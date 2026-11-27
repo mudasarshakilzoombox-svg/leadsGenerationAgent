@@ -8,13 +8,14 @@
   },
   "scripts": {
     "setup": "node infra/scripts/setup.mjs",
-    "dev": "turbo run dev",
+    "dev": "node infra/scripts/dev.mjs",
+    "dev:stop": "node infra/scripts/dev-stop.mjs",
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "lint": "turbo run lint --concurrency=2",
+    "typecheck": "turbo run typecheck --concurrency=2",
+    "test": "turbo run test --concurrency=2",
     "test:integration": "turbo run test:integration --concurrency=1",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm format:check && pnpm boundaries && pnpm lint && pnpm typecheck && pnpm test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose --env-file .env -f infra/docker/compose.dev.yml up -d --wait",
@@ -32,14 +33,26 @@
     "stack:down": "docker compose --env-file .env -f infra/docker/compose.prod.yml down",
     "stack:smoke": "node infra/scripts/smoke.mjs --web http://localhost:8080 --api http://localhost:8080",
     "ai:eval": "turbo run build --filter=@lga/core --output-logs=errors-only && pnpm --filter @lga/core ai:eval",
-    "ai:selftest": "turbo run build --filter=@lga/worker --output-logs=errors-only && pnpm --filter @lga/worker ai:selftest"
+    "ai:selftest": "turbo run build --filter=@lga/worker --output-logs=errors-only && pnpm --filter @lga/worker ai:selftest",
+    "boundaries": "depcruise apps packages --config .dependency-cruiser.cjs --output-type err && node infra/scripts/check-ownership.mjs",
+    "secrets:scan": "node infra/scripts/secrets-scan.mjs",
+    "openapi": "turbo run build --filter=@lga/api --output-logs=errors-only && pnpm --filter @lga/api openapi",
+    "e2e": "pnpm --filter @lga/web e2e",
+    "e2e:install": "pnpm --filter @lga/web exec playwright install chromium",
+    "e2e:ui": "pnpm --filter @lga/web e2e --ui",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "@swc/cli": "0.8.2",
     "@swc/core": "1.16.22",
     "chokidar": "5.0.0",
+    "dependency-cruiser": "18.7.2",
     "prettier": "3.10.1",
+    "simple-git-hooks": "2.14.0",
     "turbo": "2.11.13",
     "typescript": "6.0.3"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "node infra/scripts/pre-commit.mjs"
   }
 }

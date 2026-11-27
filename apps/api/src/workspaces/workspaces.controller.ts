@@ -51,7 +51,7 @@ import {
   ZodValidationPipe,
 } from '@lga/core';
 import type { Response } from 'express';
-import { API_PREFIX } from '../configure-app.js';
+import { API_PREFIX } from '../api-prefix.js';
 import {
   AllowRestrictedWorkspace,
   CurrentAccess,

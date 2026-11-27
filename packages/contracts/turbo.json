@@ -1,0 +1,13 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // Wait for this package's own build, so its SWC watcher never races tsc writing the same
+    // dist/ files (EPERM on Windows, ADR-0039).
+    "dev": {
+      "dependsOn": ["^build", "build"],
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

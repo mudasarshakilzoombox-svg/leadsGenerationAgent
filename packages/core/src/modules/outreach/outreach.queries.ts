@@ -21,7 +21,7 @@ import {
   resolveCampaignScope,
 } from '../../platform/tenancy/campaign-scope.js';
 import type { WorkspaceAccess } from '../../tenancy/workspace-access.service.js';
-import type { PageResult } from '../prospects/prospects.queries.js';
+import type { PageResult } from '../prospects/index.js';
 
 const campaignSelect = {
   id: true,

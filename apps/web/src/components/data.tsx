@@ -329,10 +329,10 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'muted' | 'danger' | '
 };
 
 const TONE_CLASS = {
-  success: 'border-transparent bg-success/12 text-success',
-  warning: 'border-transparent bg-warning/15 text-warning',
-  danger: 'border-transparent bg-destructive/10 text-destructive',
-  brand: 'border-transparent bg-brand-soft text-brand',
+  success: 'border-transparent bg-success/12 text-success-text',
+  warning: 'border-transparent bg-warning/15 text-warning-text',
+  danger: 'border-transparent bg-destructive/10 text-destructive-text',
+  brand: 'border-transparent bg-brand-soft text-brand-text',
   muted: 'border-transparent bg-muted text-muted-foreground',
 };
 

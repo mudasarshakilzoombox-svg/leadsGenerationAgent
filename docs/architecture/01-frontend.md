@@ -213,4 +213,5 @@ Checked in CI with `@next/bundle-analyzer` size thresholds and a Lighthouse CI r
 - **Unit/component:** Vitest + Testing Library, rendering every state per component.
 - **Accessibility:** `@axe-core/playwright` on each main page, failing on serious or critical issues.
 - **E2E:** Playwright journeys J1/J2 (PRD §5) on `Desktop Chrome` and `Pixel 7` / `iPhone 14` viewports, against the API with fake providers.
+- *As implemented (P0.5, ADR-0039):* `apps/web/e2e/` with `apps/web/playwright.config.ts`. A setup project signs the seeded Owner in once (the API limits sign-ins to 10 per minute per IP). The auth, dashboard and a11y specs run on `desktop-chrome`, `pixel-7` and `iphone-14`; all three use Chromium, and iPhone 14 is a viewport and touch emulation. Every test fails on console errors (unless it lists an expected one) and on horizontal overflow. axe uses WCAG 2.1 A/AA tags. Status-badge text uses the `--*-text` tokens for AA contrast.
 - **Visual sanity:** screenshots of `/dev/states` at 360, 768 and 1280 px, attached to the PR (no paid visual-diff service).

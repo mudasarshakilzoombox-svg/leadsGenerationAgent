@@ -3,8 +3,11 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ApiEnv } from '@lga/core';
 import { Logger } from 'nestjs-pino';
 import { mountBullBoard } from './admin/bull-board.js';
+import { mountApiDocs } from './openapi/serve.js';
 
-export const API_PREFIX = 'api/v1';
+import { API_PREFIX } from './api-prefix.js';
+
+export { API_PREFIX };
 
 /** HTTP-level setup shared by main.ts and tests, so tests exercise the real pipeline. */
 export function configureApp(app: NestExpressApplication, env: ApiEnv): void {
@@ -30,6 +33,8 @@ export function configureApp(app: NestExpressApplication, env: ApiEnv): void {
 
   // Queue dashboard (Super Admin + IP allowlist), registered before Nest's own routes.
   mountBullBoard(app, env);
+  // OpenAPI from the shared contracts at /api/docs, outside production (03-api §1).
+  mountApiDocs(app, env);
 
   app.enableShutdownHooks();
 }

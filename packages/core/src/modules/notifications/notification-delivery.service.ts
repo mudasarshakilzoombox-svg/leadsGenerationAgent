@@ -4,8 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { BaseServerEnv } from '../../config/env.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { generateToken, hashToken, maskEmail } from '../identity/domain/identity.js';
-import { AUTH_TOKEN_TTL } from '../identity/domain/token-ttl.js';
+import { AUTH_TOKEN_TTL, generateToken, hashToken, maskEmail } from '../identity/domain/index.js';
 import { SYSTEM_MAILER, type SystemMailer } from './system-mailer.js';
 import { renderEmail, type TemplateData } from './templates.js';
 
@@ -66,9 +65,11 @@ export class NotificationDeliveryService {
         if (user.emailVerifiedAt) return 'skipped';
         const token = generateToken();
         await this.prisma.$transaction([
+          // ownership-exempt: ADR-0034 token minted at send time
           this.prisma.verificationToken.deleteMany({
             where: { userId, purpose: 'EMAIL_VERIFY', usedAt: null },
           }),
+          // ownership-exempt: ADR-0034 token minted at send time
           this.prisma.verificationToken.create({
             data: {
               userId,
@@ -84,7 +85,9 @@ export class NotificationDeliveryService {
       case 'auth.password_reset': {
         const token = generateToken();
         await this.prisma.$transaction([
+          // ownership-exempt: ADR-0034 token minted at send time
           this.prisma.passwordReset.deleteMany({ where: { userId, usedAt: null } }),
+          // ownership-exempt: ADR-0034 token minted at send time
           this.prisma.passwordReset.create({
             data: {
               userId,
@@ -150,6 +153,7 @@ export class NotificationDeliveryService {
       return 'skipped';
     }
     const token = generateToken();
+    // ownership-exempt: ADR-0034 token minted at send time
     const updated = await this.prisma.verificationToken.updateMany({
       where: { id: row.id, usedAt: null },
       data: { tokenHash: hashToken(token) },
@@ -205,6 +209,7 @@ export class NotificationDeliveryService {
     }
     const token = generateToken();
     // Rotating the hash invalidates any earlier link for this invitation.
+    // ownership-exempt: ADR-0034 invitation token minted at send time
     await this.prisma.invitation.update({
       where: { id: invitation.id },
       data: { tokenHash: hashToken(token) },

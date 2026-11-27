@@ -2,7 +2,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '../../../database/prisma.service.js';
-import { AuditService } from '../../audit/audit.service.js';
+import { AuditService } from '../../audit/index.js';
 import { type ForeignKeyEdge, planPurge, type PurgePlan } from '../domain/purge-plan.js';
 import {
   WORKSPACE_LIFECYCLE_HOOKS,

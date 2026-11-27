@@ -170,9 +170,11 @@ export function ProjectSwitcher({ compact = false }: { compact?: boolean }) {
             'flex min-h-11 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-sidebar-accent sm:min-h-10',
             compact && 'justify-center',
           )}
-          aria-label={`Project: ${project.domain}. Switch project`}
         >
-          <ProjectMark project={project} />
+          {/* Visible text is the accessible name (WCAG 2.5.3); the mark is decorative. */}
+          <span aria-hidden>
+            <ProjectMark project={project} />
+          </span>
           <span
             className={cn(
               'min-w-0 flex-1 truncate text-[15px] font-semibold',
@@ -181,6 +183,7 @@ export function ProjectSwitcher({ compact = false }: { compact?: boolean }) {
           >
             {project.domain}
           </span>
+          <span className="sr-only">: switch project</span>
           <ChevronsUpDown
             className={cn('size-4 text-muted-foreground', compact && 'hidden')}
             aria-hidden
@@ -471,15 +474,15 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             'flex min-h-11 w-full items-center gap-2 rounded-md p-1.5 text-left text-sm hover:bg-sidebar-accent',
             compact ? 'justify-center' : 'justify-center lg:justify-start',
           )}
-          aria-label="Account and workspace menu"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-8" aria-hidden>
             <AvatarFallback>{initials(user.name, user.email[0]?.toUpperCase())}</AvatarFallback>
           </Avatar>
           <span className={cn('min-w-0 flex-1', compact ? 'hidden' : 'hidden lg:block')}>
             <span className="block truncate font-medium">{membership.workspace.name}</span>
             <span className="block truncate text-xs text-muted-foreground">{user.email}</span>
           </span>
+          <span className="sr-only">Account and workspace menu</span>
           <ChevronsUpDown
             className={cn('size-4 text-muted-foreground', compact ? 'hidden' : 'hidden lg:block')}
             aria-hidden

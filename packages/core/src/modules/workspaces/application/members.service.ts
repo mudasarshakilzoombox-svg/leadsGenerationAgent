@@ -3,7 +3,7 @@ import type { AssignableRole, MemberSummary, RoleKeyValue } from '@lga/contracts
 import { PrismaService } from '../../../database/prisma.service.js';
 import { DomainError } from '../../../errors/domain-error.js';
 import type { WorkspaceAccess } from '../../../tenancy/workspace-access.service.js';
-import { AuditService, type RequestMeta } from '../../audit/audit.service.js';
+import { AuditService, type RequestMeta } from '../../audit/index.js';
 
 const memberSelect = {
   id: true,
@@ -121,6 +121,7 @@ export class MembersService {
         where: { roleKey: 'OWNER' },
         select: { userId: true },
       });
+      // ownership-exempt: WS-04 AC2 until the mailboxes module exists (Phase 3)
       const reassigned = await tx.inboxConnection.updateMany({
         where: { ownerUserId: member.userId, deletedAt: null },
         data: {
@@ -149,6 +150,7 @@ export class MembersService {
     });
     // Access is resolved from memberships on every request, so this takes effect immediately.
     // Sessions themselves stay valid (the user keeps their other workspaces).
+    // ownership-exempt: WS-04 clear the removed member active workspace
     await this.prisma.session.updateMany({
       where: {
         activeWorkspaceId: access.workspaceId,
