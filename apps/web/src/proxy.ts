@@ -7,15 +7,17 @@ import { type NextRequest, NextResponse } from 'next/server';
 export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV !== 'production';
+  // Cloudflare Turnstile widget (signup/login) only when a site key is configured.
+  const turnstile = process.env.TURNSTILE_SITE_KEY ? ' https://challenges.cloudflare.com' : '';
 
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? ` 'unsafe-eval'` : ''}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${turnstile}${isDev ? ` 'unsafe-eval'` : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
     `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
-    `frame-src 'self'`,
+    `frame-src 'self'${turnstile}`,
     `frame-ancestors 'none'`,
     `form-action 'self'`,
     `base-uri 'self'`,
@@ -27,6 +29,8 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-request-id', requestId);
+  // Lets layouts build `/login?next=...` for the page that was requested.
+  requestHeaders.set('x-pathname', request.nextUrl.pathname + request.nextUrl.search);
   requestHeaders.set('content-security-policy', csp);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });

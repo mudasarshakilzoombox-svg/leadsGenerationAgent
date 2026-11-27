@@ -88,6 +88,8 @@ export const UserSummarySchema = z.object({
   email: z.string(),
   name: z.string().nullable(),
   emailVerified: z.boolean(),
+  /** Cosmetic: shows the admin entry. Admin data is gated by the admin API (MFA, IP allowlist). */
+  isPlatformAdmin: z.boolean(),
   locale: z.string().nullable(),
   timezone: z.string().nullable(),
 });

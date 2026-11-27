@@ -1,5 +1,7 @@
 # 01. Frontend Architecture
 
+
+> **Implemented (2026-11-27, ADR-0035):** app shell, auth pages, 13 workspace sections (flat routes matching the sidebar), the admin shell and shared state, data, form and chart components. shadcn primitives live in `packages/ui`; composites in `apps/web/src/components`. `next-intl` and TanStack Table are deferred.
 > Status: Draft for review · Related: [ADR-0003](adr/ADR-0003-nextjs-presentation-layer.md), [ADR-0028](adr/ADR-0028-polling-first-realtime.md), PRD §9–10
 
 ## 1. Goals and constraints

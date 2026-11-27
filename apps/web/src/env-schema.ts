@@ -9,5 +9,7 @@ export const webEnvSchema = z.object({
   APP_ORIGIN: z.url().default('http://localhost:3300'),
   APP_ENV: z.enum(['local', 'test', 'staging', 'production']).default('local'),
   RELEASE: z.string().min(1).max(64).default('dev'),
+  /** Cloudflare Turnstile site key (public). Unset: forms send a dev token the fake verifier accepts. */
+  TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 });
 export type WebEnv = z.output<typeof webEnvSchema>;

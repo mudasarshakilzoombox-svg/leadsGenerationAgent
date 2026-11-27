@@ -16,6 +16,8 @@ const config: NextConfig = {
   transpilePackages: ['@lga/ui'],
   poweredByHeader: false,
   reactStrictMode: true,
+  // The floating dev badge covers the mobile bottom navigation and the sidebar user menu.
+  devIndicators: false,
   // Few images and a small VPS: skip the image optimizer (01-frontend §2).
   images: { unoptimized: true },
   async rewrites() {

@@ -47,6 +47,7 @@ export function toUserSummary(user: SessionUser): UserSummary {
     email: user.email,
     name: user.name,
     emailVerified: user.emailVerifiedAt !== null,
+    isPlatformAdmin: user.platformRole === 'SUPER_ADMIN',
     locale: user.locale,
     timezone: user.timezone,
   };

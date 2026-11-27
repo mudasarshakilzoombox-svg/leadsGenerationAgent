@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { DashboardController } from '../dashboard/dashboard.controller.js';
 import {
   InvitationAcceptController,
   InvitationsController,
@@ -18,6 +19,7 @@ import { TenantGuard } from './tenant.guard.js';
     MembersController,
     InvitationsController,
     InvitationAcceptController,
+    DashboardController,
   ],
   providers: [TenantGuard, { provide: APP_GUARD, useClass: SessionGuard }],
 })

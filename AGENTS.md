@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). Next in Phase 0: auth and workspace UI, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (13 sections, auth pages, admin shell) shows real read-only data (ADR-0035). Next in Phase 0: OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -123,7 +123,7 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 - Pure business logic (scoring, scheduling, caps, enrollment state machine, compliance policy) lives in `domain/` with unit tests.
 - API: REST under `/api/v1`, RFC 9457 errors with stable codes, cursor pagination, `Idempotency-Key` on credit-spending or external-effect endpoints.
 - Frontend: Server Components for initial data, TanStack Query in client components, React Hook Form + Zod for forms, shadcn/ui components, Lucide icons. No business logic in Server Actions.
-- Every screen implements the empty, loading, error (field, action, page, permission, limit-reached) and success states from PRD §9, using the shared state components. Every screen works from 360 px to wide per PRD §10 (tables become cards on mobile, touch targets ≥ 44 px, no horizontal page scroll).
+- Every screen implements the empty, loading, error (field, action, page, permission, limit-reached) and success states from PRD §9, using the shared state components in `apps/web/src/components/states.tsx`. An action whose backend does not exist yet is a `ComingSoon` (visibly disabled, with the phase in a tooltip), never a dead button. Permission-dependent UI uses `<Can>`; forms use `method="post"` and `SubmitButton`. Every screen works from 360 px to wide per PRD §10 (tables become cards on mobile, touch targets ≥ 44 px, no horizontal page scroll).
 - Plan limits and credit costs come from `platform/billing/plans.ts` (mirroring PRD §8). Never hard-code them in modules or UI.
 - Naming: files `kebab-case.ts`, classes `PascalCase`, functions and variables `camelCase`, queues `kebab-case`, job names `domain.action` (for example `email.send`), events `entity.past_tense` (for example `reply.received`).
 - Keep changes small and focused. Don't refactor unrelated code in the same change.

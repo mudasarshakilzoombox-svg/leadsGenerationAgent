@@ -5,6 +5,7 @@ import 'reflect-metadata';
 import { RequestMethod } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { AuthController } from '../src/auth/auth.controller.js';
+import { DashboardController } from '../src/dashboard/dashboard.controller.js';
 import { IS_PUBLIC, REQUIRED_PERMISSIONS, SELF_SERVICE } from '../src/auth/request-context.js';
 import { TenantGuard } from '../src/auth/tenant.guard.js';
 import { HealthController } from '../src/health/health.controller.js';
@@ -22,6 +23,7 @@ const CONTROLLERS = [
   MembersController,
   InvitationsController,
   InvitationAcceptController,
+  DashboardController,
   HealthController,
   SystemController,
 ];

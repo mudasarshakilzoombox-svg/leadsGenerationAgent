@@ -3,6 +3,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_CONFIG } from '../config/config.module.js';
 import type { ApiEnv, BaseServerEnv, WorkerEnv } from '../config/env.js';
 import { RateLimiter } from '../platform/rate-limit/rate-limiter.js';
+import { AccountQueries } from './account/account.queries.js';
 import { AuditService } from './audit/audit.service.js';
 import { AuthService } from './identity/application/auth.service.js';
 import { SessionService } from './identity/application/session.service.js';
@@ -17,6 +18,7 @@ import {
   TurnstileHumanVerifier,
 } from './identity/infrastructure/human-verifier.js';
 import { PasswordHasher } from './identity/infrastructure/password-hasher.js';
+import { InsightsQueries } from './insights/insights.queries.js';
 import { NotificationDeliveryService } from './notifications/notification-delivery.service.js';
 import { NotificationDispatcher } from './notifications/notification-dispatcher.js';
 import {
@@ -24,6 +26,8 @@ import {
   SmtpSystemMailer,
   SYSTEM_MAILER,
 } from './notifications/system-mailer.js';
+import { OutreachQueries } from './outreach/outreach.queries.js';
+import { ProspectsQueries } from './prospects/prospects.queries.js';
 import { InvitationsService } from './workspaces/application/invitations.service.js';
 import { MembersService } from './workspaces/application/members.service.js';
 import { SeatPolicy } from './workspaces/application/seat-policy.js';
@@ -66,6 +70,11 @@ export class IdentityModule {
       MembersService,
       InvitationsService,
       SeatPolicy,
+      // Read models for the dashboard (ADR-0035).
+      InsightsQueries,
+      ProspectsQueries,
+      OutreachQueries,
+      AccountQueries,
       {
         provide: BREACHED_PASSWORD_CHECKER,
         inject: [APP_CONFIG],

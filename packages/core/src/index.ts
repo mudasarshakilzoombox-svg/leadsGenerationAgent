@@ -40,3 +40,8 @@ export * from './modules/workspaces/application/workspace.service.js';
 export * from './modules/workspaces/application/members.service.js';
 export * from './modules/workspaces/application/invitations.service.js';
 export * from './modules/workspaces/application/seat-policy.js';
+export * from './platform/pagination/cursor.js';
+export * from './modules/insights/insights.queries.js';
+export * from './modules/prospects/prospects.queries.js';
+export * from './modules/outreach/outreach.queries.js';
+export * from './modules/account/account.queries.js';

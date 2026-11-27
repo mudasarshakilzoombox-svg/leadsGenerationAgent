@@ -15,6 +15,7 @@ export interface SessionUser {
   emailNormalized: string;
   name: string | null;
   emailVerifiedAt: Date | null;
+  platformRole: 'NONE' | 'SUPER_ADMIN';
   locale: string | null;
   timezone: string | null;
 }
@@ -36,6 +37,7 @@ const userSelect = {
   emailNormalized: true,
   name: true,
   emailVerifiedAt: true,
+  platformRole: true,
   locale: true,
   timezone: true,
   deletedAt: true,

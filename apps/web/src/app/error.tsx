@@ -5,10 +5,10 @@ import { Button } from '@lga/ui/components/button';
 /** Page-level error state (PRD §9.1): plain language, retry, reference for support. */
 export default function ErrorPage({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
@@ -19,7 +19,7 @@ export default function ErrorPage({
       {error.digest ? (
         <p className="font-mono text-xs text-muted-foreground">Reference: {error.digest}</p>
       ) : null}
-      <Button onClick={reset}>Try again</Button>
+      <Button onClick={retry}>Try again</Button>
     </main>
   );
 }

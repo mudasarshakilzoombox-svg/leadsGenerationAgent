@@ -74,13 +74,18 @@ await check('web /healthz', async () => {
   assert(r.status === 200 && r.json?.status === 'ok', `status ${r.status}`);
 });
 
-await check('web / renders with CSP', async () => {
-  const r = await get(`${values.web}/`);
+await check('web /login renders with CSP', async () => {
+  const r = await get(`${values.web}/login`);
   assert(r.status === 200, `status ${r.status}`);
   assert(r.text.includes('Lead Generation Agent'), 'page title missing');
   const csp = r.headers.get('content-security-policy') ?? '';
   assert(csp.includes("frame-ancestors 'none'") && csp.includes('nonce-'), 'CSP header missing');
-  assert(r.text.includes('Healthy'), 'status badges missing');
+  assert(r.text.includes('Sign in'), 'sign-in form missing');
+});
+
+await check('web / sends signed-out visitors to sign in', async () => {
+  const r = await get(`${values.web}/`);
+  assert(r.status === 200 && r.text.includes('Sign in'), `status ${r.status}`);
 });
 
 await check('api /health/live', async () => {
