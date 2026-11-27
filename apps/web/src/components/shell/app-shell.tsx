@@ -66,6 +66,7 @@ import {
 import { hardNavigate } from '@/lib/navigate';
 import { rememberProject } from '@/lib/project-cookie';
 import { useWorkspace } from '@/lib/workspace-context';
+import { PendingDeletionBanner } from './pending-deletion-banner';
 
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -673,6 +674,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <OfflineBanner />
+        <PendingDeletionBanner />
         <TopBar />
         <main
           id="main"

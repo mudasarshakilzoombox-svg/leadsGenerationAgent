@@ -116,7 +116,15 @@ export class WorkspaceService {
         id: true,
         roleKey: true,
         workspace: {
-          select: { id: true, name: true, slug: true, status: true, planKey: true, settings: true },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            planKey: true,
+            settings: true,
+            purgeAfter: true,
+          },
         },
       },
       orderBy: { joinedAt: 'asc' },
@@ -129,6 +137,7 @@ export class WorkspaceService {
         slug: m.workspace.slug,
         status: m.workspace.status,
         planKey: m.workspace.planKey,
+        purgeAfter: m.workspace.purgeAfter?.toISOString() ?? null,
       },
       roleKey: m.roleKey as RoleKeyValue,
       permissions: [

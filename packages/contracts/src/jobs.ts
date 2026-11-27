@@ -5,6 +5,8 @@ export const QUEUE_NAMES = {
   system: 'system',
   notifications: 'notifications',
   ai: 'ai',
+  /** Reconcilers, purges and other system upkeep. Concurrency 1 (06-background-jobs §2). */
+  maintenance: 'maintenance',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
@@ -14,6 +16,10 @@ export const JOB_NAMES = {
   notifyEmail: 'notify.email',
   /** Runs `system.selftest` through AiActionPipeline: proves routing, provider and metering. */
   aiSelftest: 'ai.selftest',
+  /** Runs every registered reconciler once (every 5 min, system context). */
+  reconcileSweep: 'reconcile.sweep',
+  /** Permanently deletes one workspace whose 30-day restore window ended (PRD WS-07). */
+  workspacePurge: 'workspace.purge',
 } as const;
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
 

@@ -25,6 +25,7 @@ export const REQUIRED_PERMISSIONS = 'lga:requiredPermissions';
 export const REQUIRE_VERIFIED_EMAIL = 'lga:requireVerifiedEmail';
 export const REQUIRE_RECENT_AUTH = 'lga:requireRecentAuth';
 export const SELF_SERVICE = 'lga:selfService';
+export const ALLOW_RESTRICTED_WORKSPACE = 'lga:allowRestrictedWorkspace';
 
 /** Opt out of the global session requirement (signup, login, health, ...). */
 export const Public = () => SetMetadata(IS_PUBLIC, true);
@@ -40,6 +41,11 @@ export const RequireRecentAuth = (seconds = 600) => SetMetadata(REQUIRE_RECENT_A
  * needs none, removing someone else needs `members.manage`). The service enforces it.
  */
 export const SelfService = () => SetMetadata(SELF_SERVICE, true);
+/**
+ * Lets a write through while the workspace is READ_ONLY or PENDING_DELETION. Only for the
+ * lifecycle commands that exist to leave that state: delete and restore (ADR-0038).
+ */
+export const AllowRestrictedWorkspace = () => SetMetadata(ALLOW_RESTRICTED_WORKSPACE, true);
 
 export const CurrentSession = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): ActiveSession => {

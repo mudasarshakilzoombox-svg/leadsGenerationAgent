@@ -107,6 +107,7 @@
 
 - Editable aggregates (`business_profiles`, `icps`, `campaigns`, `campaign_steps`, `message_drafts`, `workspaces.settings`) have `row_version int`. GET returns `ETag: W/"<row_version>"`.
 - `PATCH`/`PUT` on them **require** `If-Match` (428 if missing, 412 on mismatch). The update is `UPDATE … SET row_version = row_version + 1 WHERE id = $1 AND workspace_id = $2 AND row_version = $3`.
+- *As implemented for workspaces (P0.4):* `GET`/`PATCH /workspaces/:workspaceId` send the ETag. `PATCH` parses `If-Match` with `parseIfMatch` (`packages/core/src/platform/http/etag.ts`) and updates with `WHERE id = $1 AND row_version = $2`; `workspaces` has no `workspace_id` column.
 - State commands (`launch`, `approve`, `pause`) also accept `If-Match`. A campaign approval stores the `config_hash` (DATABASE_DESIGN.md `campaign_approvals`), so edits after approval are detected.
 
 ## 8. Rate limits

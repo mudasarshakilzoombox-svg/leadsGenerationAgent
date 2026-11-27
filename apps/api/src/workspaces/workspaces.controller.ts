@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   Param,
   Patch,
@@ -28,23 +29,31 @@ import {
   TokenRequestSchema,
   type TransferOwnershipRequest,
   TransferOwnershipRequestSchema,
+  type DeleteWorkspaceRequest,
+  DeleteWorkspaceRequestSchema,
+  type UpdateWorkspaceRequest,
+  UpdateWorkspaceRequestSchema,
+  type WorkspaceDetail,
   type WorkspaceSummary,
 } from '@lga/contracts';
 import {
   type ActiveSession,
   DomainError,
+  formatEtag,
   InvitationsService,
   MembersService,
-  PrismaService,
+  parseIfMatch,
   type RequestMeta,
-  toWorkspaceSummary,
   type WorkspaceAccess,
+  WorkspaceLifecycleService,
   WorkspaceService,
+  WorkspaceSettingsService,
   ZodValidationPipe,
 } from '@lga/core';
 import type { Response } from 'express';
 import { API_PREFIX } from '../configure-app.js';
 import {
+  AllowRestrictedWorkspace,
   CurrentAccess,
   CurrentSession,
   Meta,
@@ -60,12 +69,16 @@ import { IdempotencyInterceptor } from '../common/idempotency.interceptor.js';
 
 type List<T> = { data: T[]; nextCursor: null };
 
-/** PRD WS-01: workspaces the user belongs to, and creating new ones. */
+/**
+ * PRD WS-01: workspaces the user belongs to and creating new ones. WS-06: settings with
+ * optimistic locking (ETag / If-Match, 03-api §7). WS-07: delete with a 30-day restore window.
+ */
 @Controller('workspaces')
 export class WorkspacesController {
   constructor(
     private readonly workspaces: WorkspaceService,
-    private readonly prisma: PrismaService,
+    private readonly settings: WorkspaceSettingsService,
+    private readonly lifecycle: WorkspaceLifecycleService,
   ) {}
 
   @Post()
@@ -93,17 +106,59 @@ export class WorkspacesController {
   @UseGuards(TenantGuard)
   async get(
     @CurrentAccess() access: WorkspaceAccess,
-  ): Promise<WorkspaceSummary & { roleKey: string; permissions: string[] }> {
-    // Membership was verified by TenantGuard; the workspace row itself is not tenant-scoped.
-    const workspace = await this.prisma.workspace.findUniqueOrThrow({
-      where: { id: access.workspaceId },
-    });
-    return {
-      ...toWorkspaceSummary(workspace),
-      roleKey: access.roleKey,
-      permissions: [...access.permissions].sort(),
-    };
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<WorkspaceDetail> {
+    return withEtag(res, await this.settings.get(access));
   }
+
+  @Patch(':workspaceId')
+  @UseGuards(TenantGuard)
+  @RequirePermission('workspace.settings')
+  async update(
+    @Body(new ZodValidationPipe(UpdateWorkspaceRequestSchema)) body: UpdateWorkspaceRequest,
+    @Headers('if-match') ifMatch: string | undefined,
+    @CurrentAccess() access: WorkspaceAccess,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<WorkspaceDetail> {
+    const expected = parseIfMatch(ifMatch);
+    return withEtag(res, await this.settings.update(access, expected, body, meta));
+  }
+
+  /** WS-07 AC1: Owner only, typed name, recent password. Sending stops at once (SendPolicy SP-01). */
+  @Delete(':workspaceId')
+  @UseGuards(TenantGuard)
+  @RequirePermission('workspace.delete')
+  @RequireRecentAuth()
+  @AllowRestrictedWorkspace()
+  async remove(
+    @Body(new ZodValidationPipe(DeleteWorkspaceRequestSchema)) body: DeleteWorkspaceRequest,
+    @CurrentAccess() access: WorkspaceAccess,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<WorkspaceDetail> {
+    return withEtag(res, await this.lifecycle.requestDeletion(access, body.confirmName, meta));
+  }
+
+  /** WS-07 AC2: the Owner can restore within the 30-day grace period. */
+  @Post(':workspaceId/restore')
+  @UseGuards(TenantGuard)
+  @RequirePermission('workspace.delete')
+  @AllowRestrictedWorkspace()
+  @HttpCode(200)
+  async restore(
+    @CurrentAccess() access: WorkspaceAccess,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<WorkspaceDetail> {
+    return withEtag(res, await this.lifecycle.restore(access, meta));
+  }
+}
+
+function withEtag(res: Response, detail: WorkspaceDetail): WorkspaceDetail {
+  res.setHeader('ETag', formatEtag(detail.rowVersion));
+  res.setHeader('Cache-Control', 'no-store');
+  return detail;
 }
 
 /** PRD WS-04/05: team management inside one workspace. */

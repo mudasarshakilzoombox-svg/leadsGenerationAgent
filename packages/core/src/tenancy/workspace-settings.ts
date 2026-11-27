@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { WorkspaceSettingsSchema, type WorkspaceSettings } from '@lga/contracts';
 
-/** Typed view of `workspaces.settings`. Unknown keys are kept for forward compatibility. */
-export const WorkspaceSettingsSchema = z.looseObject({
-  /** PRD WS-06: Members need approval to launch. Defaults to ON. */
-  launchRequiresApproval: z.boolean().default(true),
-});
-export type WorkspaceSettings = z.infer<typeof WorkspaceSettingsSchema>;
+export type { WorkspaceSettings } from '@lga/contracts';
 
-/** Never throws: malformed settings fall back to the safe defaults. */
+/**
+ * Typed view of `workspaces.settings` (schema in @lga/contracts). Never throws: a malformed
+ * field falls back to its safe default (for example launch approval stays ON).
+ */
 export function parseWorkspaceSettings(value: unknown): WorkspaceSettings {
-  const parsed = WorkspaceSettingsSchema.safeParse(value ?? {});
+  const parsed = WorkspaceSettingsSchema.safeParse(
+    value && typeof value === 'object' && !Array.isArray(value) ? value : {},
+  );
   return parsed.success ? parsed.data : WorkspaceSettingsSchema.parse({});
 }

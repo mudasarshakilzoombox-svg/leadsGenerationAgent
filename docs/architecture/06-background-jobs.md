@@ -174,6 +174,13 @@ BullMQ OSS has no per-group concurrency, so fairness uses two mechanisms:
 | Webhooks | `webhook_events.status = RECEIVED` older than 5 min | Re-enqueue |
 | Inbox sync | Mailboxes `CONNECTED` with `last_synced_at` older than 15 min | Enqueue sync + raise `inbox_sync_lag` alert if repeated |
 
+**As implemented (P0.4, ADR-0038):**
+- **Framework.** A reconciler implements `Reconciler { key, description, run(): {examined, acted} }` (`packages/core/src/platform/jobs/reconciler.ts`) and is listed in `MaintenanceModule`.
+- **Sweep.** The worker registers `reconcile.sweep` on the `maintenance` queue with `upsertJobScheduler('maintenance-reconcile', every 5 min)`. `ReconcilerRunner` runs each reconciler under its own Valkey lock (`lock:reconcile:<key>`), so an overlapping sweep skips it, and one failure never stops the others.
+- **Live reconcilers:**
+  - `workspace-purge-due`: enqueues `workspace.purge` with `jobId('workspace-purge', id)`.
+  - `ai-run-payload-purge`: clears `ai_runs` payloads older than 30 days.
+
 ## 10. Repeatable schedules
 
 | Job | Cadence | Notes |
@@ -199,6 +206,7 @@ Metrics per queue: depth by state, wait time (enqueue → start), processing dur
 ## 12. Operations
 
 - **Bull Board** at `/admin/queues` (Super Admin + IP allowlist): inspect, retry and remove jobs. Retrying from Bull Board is safe because processors are idempotent.
+  - *As implemented (P0.4, ADR-0038):* the API mounts it behind a placeholder guard: `SUPER_ADMIN` plus a client IP in `ADMIN_IP_ALLOWLIST` (empty means nobody). It always denies in staging and production until MFA exists (P6.1), and returns 404 otherwise. nginx still returns 404 for the path.
 - **Admin replay:** "Re-run failed items for entity X" in the Super Admin console enqueues fresh jobs with the same deterministic IDs.
 - **Pause switches:** `queue.pause()` exposed via kill switches (pausing `email-send` globally is the "stop all sending" switch, ADR-0013).
 

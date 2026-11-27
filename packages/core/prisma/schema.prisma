@@ -791,6 +791,8 @@ model Workspace {
   legalName           String?         @map("legal_name")
   planKey             String          @map("plan_key")
   status              WorkspaceStatus @default(TRIALING)
+  /// Status at the moment the Owner asked for deletion; restore puts it back (ADR-0038).
+  statusBeforeDeletion WorkspaceStatus? @map("status_before_deletion")
   sendingStanding     SendingStanding @default(GOOD) @map("sending_standing")
   standingReason      String?         @map("standing_reason")
   trialEndsAt         DateTime?       @map("trial_ends_at") @db.Timestamptz(3)
@@ -855,6 +857,8 @@ model Workspace {
 
   @@unique([slug], map: "workspaces_slug_active_key", where: raw("deleted_at IS NULL"))
   @@index([status])
+  /// Partial index for the workspace-purge-due reconciler (ADR-0038).
+  @@index([purgeAfter], map: "workspaces_purge_due_idx", where: raw("status = 'PENDING_DELETION'"))
   @@map("workspaces")
 }
 

@@ -2,6 +2,7 @@ import { RequestMethod } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ApiEnv } from '@lga/core';
 import { Logger } from 'nestjs-pino';
+import { mountBullBoard } from './admin/bull-board.js';
 
 export const API_PREFIX = 'api/v1';
 
@@ -26,6 +27,9 @@ export function configureApp(app: NestExpressApplication, env: ApiEnv): void {
       { path: 'health/ready', method: RequestMethod.GET },
     ],
   });
+
+  // Queue dashboard (Super Admin + IP allowlist), registered before Nest's own routes.
+  mountBullBoard(app, env);
 
   app.enableShutdownHooks();
 }

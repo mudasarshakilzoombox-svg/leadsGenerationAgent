@@ -109,6 +109,8 @@ export const MembershipSummarySchema = z.object({
     slug: z.string(),
     status: z.string(),
     planKey: z.string(),
+    /** Set while the workspace is PENDING_DELETION (PRD WS-07): the shell shows a restore banner. */
+    purgeAfter: z.iso.datetime().nullable().optional(),
   }),
   roleKey: RoleKeySchema,
   permissions: z.array(z.string()),

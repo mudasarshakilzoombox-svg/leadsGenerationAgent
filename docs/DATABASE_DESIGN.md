@@ -309,11 +309,12 @@ Columns `id`, `workspace_id`, `created_at` and `updated_at` are implied on every
 | `sending_standing` | enum `GOOD`,`WARNING`,`RESTRICTED`,`SUSPENDED` | Set by abuse rules and Super Admins (PRD SA-02). `SUSPENDED` blocks sending and credit spend |
 | `standing_reason` | text | |
 | `trial_ends_at` | timestamptz | Trial is 14 days |
-| `physical_address` | jsonb | **Required before any launch** (email footer) |
+| `physical_address` | jsonb | **Required before any launch** (email footer). Shape (`PhysicalAddressSchema`): `{line1, line2?, city, region?, postalCode?, country}` with an ISO alpha-2 country |
 | `privacy_notice_url` | text | Required before launch |
 | `default_timezone` | text | |
-| `settings` | jsonb | `{launchRequiresApproval: true, defaultSendWindow, discoveryConfirmThreshold: 500, autoVerify: true, features, retention, countryPolicyOverrides}` |
-| `deletion_requested_at`, `purge_after` | timestamptz | 30-day restorable grace period |
+| `settings` | jsonb | `{launchRequiresApproval: true, defaultSendWindow, discoveryConfirmThreshold: 500, autoVerify: true, features, retention, countryPolicyOverrides}`. `defaultSendWindow` = `{days: 1..7[], start: "HH:MM", end: "HH:MM"}`, default Mon–Fri 09:00–17:00 (`WorkspaceSettingsSchema` in contracts) |
+| `deletion_requested_at`, `purge_after` | timestamptz | 30-day restorable grace period. Partial index `workspaces_purge_due_idx` WHERE `status = 'PENDING_DELETION'` |
+| `status_before_deletion` | `workspace_status` NULL | Status at the deletion request. Restore puts it back (ADR-0038) |
 | `deleted_at` | timestamptz | |
 
 **`memberships`**: `user_id` FK, `role` enum(`OWNER`,`ADMIN`,`MEMBER`), `notification_preferences jsonb` (per-type email opt-outs, daily digest on/off). UQ(`workspace_id`,`user_id`). **Partial UQ(`workspace_id`) WHERE `role = 'OWNER'`** guarantees exactly one Owner (ownership transfer swaps roles in one transaction).
@@ -653,7 +654,7 @@ Prisma cannot express partial or GIN-trigram indexes, so these are added as hand
 | Deleted workspaces | 30-day restorable grace (`PENDING_DELETION`), then full deletion | `workspace.purge` job |
 | Expired trials without a plan | Data kept 30 days (reply sync for 14 days), then deletion with warnings at day 14 and 25 | `billing.trial-expiry` + `workspace.purge` |
 | Cancelled subscriptions | Read-only (export allowed) for 30 days after period end, then deletion warnings and purge after a further 30 days | `workspace.purge` |
-| `credit_grants`, `usage_records`, `subscriptions` | 7 years (financial records), with personal data minimized | Retained |
+| `credit_grants`, `usage_records`, `subscriptions` | 7 years (financial records), with personal data minimized | Retained. **Until Phase 5** the workspace purge deletes them with the workspace (no real payments exist yet). Phase 5 archives them through the `WorkspaceLifecycleHooks.beforePurge` hook before billing goes live (ADR-0038) |
 | Backups | Up to 6 months (monthly) | Erased data disappears as backups age out. This is documented in the privacy policy |
 
 ### 8.2 Re-verification freshness

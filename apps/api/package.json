@@ -17,12 +17,15 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@bull-board/api": "9.13.1",
+    "@bull-board/express": "9.13.1",
     "@lga/contracts": "workspace:*",
     "@lga/core": "workspace:*",
     "@lga/shared": "workspace:*",
     "@nestjs/common": "12.6.2",
     "@nestjs/core": "12.6.2",
     "@nestjs/platform-express": "12.6.2",
+    "bullmq": "6.7.10",
     "nestjs-pino": "5.3.2",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",

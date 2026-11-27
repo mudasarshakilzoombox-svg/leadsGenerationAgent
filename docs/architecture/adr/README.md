@@ -41,3 +41,4 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0035](ADR-0035-dashboard-ui-and-read-models.md) | Dashboard UI, read-only data endpoints and the admin shell | Accepted | — |
 | [0036](ADR-0036-project-scoped-navigation.md) | Project-scoped navigation and dashboard (Explee-style) | Accepted | — |
 | [0037](ADR-0037-ai-gateway-implementation.md) | AI gateway implementation choices (P0.2) | Accepted | — |
+| [0038](ADR-0038-workspace-lifecycle-implementation.md) | Workspace lifecycle, purge path, reconcilers and the Bull Board guard (P0.4) | Accepted | — |

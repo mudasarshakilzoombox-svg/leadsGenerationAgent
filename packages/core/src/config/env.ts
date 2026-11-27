@@ -116,6 +116,20 @@ export const apiEnvSchema = z
     GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
     MS_OAUTH_CLIENT_ID: z.string().min(1).optional(),
     MS_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+    /**
+     * Client IPs allowed to open /admin/queues (Bull Board), comma-separated (08-authentication
+     * §10). Empty means nobody: the dashboard is denied by default.
+     */
+    ADMIN_IP_ALLOWLIST: z
+      .string()
+      .max(2000)
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((ip) => ip.trim())
+          .filter(Boolean),
+      ),
   })
   .superRefine((env, ctx) => {
     refineServerEnv(env, ctx);

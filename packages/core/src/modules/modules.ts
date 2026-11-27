@@ -47,6 +47,16 @@ import { InvitationsService } from './workspaces/application/invitations.service
 import { MembersService } from './workspaces/application/members.service.js';
 import { SeatPolicy } from './workspaces/application/seat-policy.js';
 import { WorkspaceService } from './workspaces/application/workspace.service.js';
+import { AiRunPayloadReconciler } from '../platform/ai/ai-run-payload.reconciler.js';
+import { RECONCILERS, type Reconciler, ReconcilerRunner } from '../platform/jobs/reconciler.js';
+import {
+  NoopWorkspaceLifecycleHooks,
+  WORKSPACE_LIFECYCLE_HOOKS,
+} from './workspaces/application/workspace-lifecycle-hooks.js';
+import { WorkspaceLifecycleService } from './workspaces/application/workspace-lifecycle.service.js';
+import { WorkspacePurgeDueReconciler } from './workspaces/application/workspace-purge-due.reconciler.js';
+import { WorkspacePurgeService } from './workspaces/application/workspace-purge.service.js';
+import { WorkspaceSettingsService } from './workspaces/application/workspace-settings.service.js';
 
 /**
  * Audit, rate limits, the email dispatcher/deliverer and the security utilities (FieldCrypto,
@@ -59,6 +69,8 @@ export class PlatformServicesModule {
       AuditService,
       RateLimiter,
       NotificationDispatcher,
+      // Phase 5 billing replaces this (cancel at period end, archive financial records).
+      { provide: WORKSPACE_LIFECYCLE_HOOKS, useClass: NoopWorkspaceLifecycleHooks },
       NotificationDeliveryService,
       {
         provide: SYSTEM_MAILER,
@@ -106,6 +118,8 @@ export class IdentityModule {
       SessionService,
       AuthService,
       WorkspaceService,
+      WorkspaceSettingsService,
+      WorkspaceLifecycleService,
       MembersService,
       InvitationsService,
       SeatPolicy,
@@ -163,5 +177,28 @@ export class IdentityModule {
       },
     ];
     return { module: IdentityModule, global: true, providers, exports: providers };
+  }
+}
+
+/**
+ * Worker-only upkeep (06-background-jobs §9, ADR-0038): the reconciler framework, its
+ * reconcilers and the workspace purge. Requires RedisModule, QueueModule and
+ * PlatformServicesModule.
+ */
+@Module({})
+export class MaintenanceModule {
+  static forRoot(): DynamicModule {
+    const reconcilers = [WorkspacePurgeDueReconciler, AiRunPayloadReconciler];
+    const providers = [
+      WorkspacePurgeService,
+      ...reconcilers,
+      {
+        provide: RECONCILERS,
+        inject: reconcilers,
+        useFactory: (...list: Reconciler[]): Reconciler[] => list,
+      },
+      ReconcilerRunner,
+    ];
+    return { module: MaintenanceModule, global: true, providers, exports: providers };
   }
 }

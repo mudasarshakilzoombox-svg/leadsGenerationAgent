@@ -10,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@lga/ui/components/dialog';
+import { Input } from '@lga/ui/components/input';
+import { Label } from '@lga/ui/components/label';
 import { Skeleton, Tooltip, TooltipContent, TooltipTrigger } from '@lga/ui/components/misc';
 import { cn } from '@lga/ui/lib/utils';
 import {
@@ -22,7 +24,7 @@ import {
   ShieldAlert,
   WifiOff,
 } from 'lucide-react';
-import { type ComponentProps, type ReactNode, useState, useSyncExternalStore } from 'react';
+import { type ComponentProps, type ReactNode, useId, useState, useSyncExternalStore } from 'react';
 
 // ------------------------------------------------------------------ empty
 
@@ -380,6 +382,94 @@ export function ConfirmDialog({
             {confirmLabel}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Typed confirmation for irreversible actions (PRD §9.1, e.g. delete workspace): the confirm
+ * button stays disabled until `confirmText` is typed exactly. Default focus is Cancel.
+ */
+export function TypedConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  consequence,
+  confirmText,
+  confirmLabel,
+  onConfirm,
+  pending,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  consequence: ReactNode;
+  confirmText: string;
+  confirmLabel: string;
+  onConfirm: (typed: string) => void;
+  pending?: boolean;
+}) {
+  const [cancelRef, setCancelRef] = useState<HTMLButtonElement | null>(null);
+  const [typed, setTyped] = useState('');
+  const id = useId();
+  const matches = typed.trim() === confirmText.trim();
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setTyped('');
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          cancelRef?.focus();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-2">{consequence}</div>
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          method="post"
+          noValidate
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (matches && !pending) onConfirm(typed);
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor={id}>
+              Type <span className="font-semibold">{confirmText}</span> to confirm
+            </Label>
+            <Input
+              id={id}
+              value={typed}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => setTyped(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              ref={setCancelRef}
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" disabled={!matches || pending}>
+              {pending && <Loader2 className="animate-spin" aria-hidden />}
+              {confirmLabel}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

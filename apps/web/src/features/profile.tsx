@@ -38,6 +38,7 @@ import { ConfirmDialog, ErrorPanel } from '@/components/states';
 import { api } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { formatDate } from '@/lib/format';
+import { timeZones } from '@/lib/timezones';
 import { useWorkspace } from '@/lib/workspace-context';
 
 // ------------------------------------------------------------------ name + time zone
@@ -47,14 +48,6 @@ const DetailsSchema = z.object({
   timezone: TimezoneSchema.or(z.literal('')),
 });
 type Details = z.infer<typeof DetailsSchema>;
-
-function timeZones(): string[] {
-  try {
-    return Intl.supportedValuesOf('timeZone');
-  } catch {
-    return ['UTC'];
-  }
-}
 
 function DetailsCard() {
   const { user } = useWorkspace();

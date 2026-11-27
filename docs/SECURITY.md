@@ -137,6 +137,7 @@ See [DATABASE_DESIGN.md §7](DATABASE_DESIGN.md). Mandatory controls:
 - `SUPER_ADMIN` is a separate platform role, granted only via CLI/DB by an operator. MFA is required, and `/admin` routes are IP-allowlisted at nginx.
 - **Impersonation** is read-only by default, time-boxed (30 min), requires a stated reason, is visible to the customer in their audit log, and write actions need an explicit second confirmation.
 - Bull Board and other operational UIs are available only behind super-admin auth and the IP allowlist.
+  - *As implemented (P0.4, ADR-0038):* a placeholder guard (`apps/api/src/admin/bull-board.ts`) allows `SUPER_ADMIN` from an IP in `ADMIN_IP_ALLOWLIST` only. It always denies in staging and production until MFA (P6.1), and answers 404 to everyone else. State-changing requests must be same-origin.
 
 ---
 

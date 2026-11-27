@@ -105,6 +105,13 @@ stateDiagram-v2
     CLOSED --> [*]
 ```
 
+**As implemented (P0.4, ADR-0038):**
+- `DELETE /workspaces/:id` is Owner only, with a typed name and recent re-auth. It moves `TRIALING`, `ACTIVE`, `PAST_DUE` or `READ_ONLY` to `PENDING_DELETION` and records `status_before_deletion`.
+- `POST …/restore` puts that status back, so restore does not always mean `ACTIVE`.
+- Both routes carry `@AllowRestrictedWorkspace()`; every other write still gets `WORKSPACE_RESTRICTED`.
+- The `workspace-purge-due` reconciler enqueues `workspace.purge` once `purge_after` passes. The purge marks the workspace `CLOSED` (members get 404), deletes its rows in batches and finally deletes the `workspaces` row.
+- The web shell shows a pending-deletion banner to every member, with Restore for the Owner.
+
 Sending standing (`GOOD`/`WARNING`/`RESTRICTED`/`SUSPENDED`) is orthogonal and enforced by `SendPolicy` SP-01 and entitlement checks.
 
 ## 8. Noisy-neighbor protection

@@ -11,7 +11,7 @@ import {
   MemberSummarySchema,
   type SessionSummary,
   SessionSummarySchema,
-  type WorkspaceSummary,
+  type WorkspaceDetail,
 } from '@lga/contracts';
 import { Button } from '@lga/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@lga/ui/components/card';
@@ -62,12 +62,12 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { DetailList, PageHeader, StatusBadge } from '@/components/data';
+import { PageHeader, StatusBadge } from '@/components/data';
 import { applyApiError, Field, SubmitButton } from '@/components/forms';
 import { ReauthDialog } from '@/components/reauth-dialog';
 import { ProfileTab } from './profile';
+import { WorkspaceSettings } from './workspace-settings';
 import {
-  ComingSoon,
   ConfirmDialog,
   ErrorPanel,
   LimitReachedPanel,
@@ -77,7 +77,6 @@ import {
 import { api, idempotencyKey } from '@/lib/api/client';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 import { formatDate, formatRelative, humanize, initials } from '@/lib/format';
-import { PHASE } from '@/lib/navigation';
 import { useCan, useWorkspace } from '@/lib/workspace-context';
 import { hardNavigate } from '@/lib/navigate';
 
@@ -583,17 +582,12 @@ function describeAgent(ua: string | null): string {
 const TABS = ['workspace', 'team', 'sessions', 'profile'] as const;
 type Tab = (typeof TABS)[number];
 
-export function SettingsView({
-  workspace,
-}: {
-  workspace: WorkspaceSummary & { roleKey: string; permissions: string[] };
-}) {
+export function SettingsView({ workspace }: { workspace: WorkspaceDetail }) {
   const pathname = usePathname();
   const search = useSearchParams();
   const tab = (TABS as readonly string[]).includes(search.get('tab') ?? '')
     ? (search.get('tab') as Tab)
     : 'workspace';
-  const canEdit = workspace.permissions.includes('workspace.settings');
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Workspace details, your team and your account." />
@@ -608,33 +602,7 @@ export function SettingsView({
           <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
         <TabsContent value="workspace">
-          <Card className="gap-4">
-            <CardHeader className="flex flex-row items-start justify-between gap-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base">{workspace.name}</CardTitle>
-                <CardDescription>Your role: {humanize(workspace.roleKey)}</CardDescription>
-              </div>
-              {canEdit && (
-                <ComingSoon
-                  phase={PHASE.workspaceSettings}
-                  label="Edit settings"
-                  reason="Address, privacy notice, defaults and launch approval."
-                />
-              )}
-            </CardHeader>
-            <CardContent>
-              <DetailList
-                items={[
-                  { label: 'URL', value: `/${workspace.slug}` },
-                  { label: 'Plan', value: humanize(workspace.planKey) },
-                  { label: 'Status', value: <StatusBadge status={workspace.status} /> },
-                  { label: 'Trial ends', value: formatDate(workspace.trialEndsAt) },
-                  { label: 'Default time zone', value: workspace.defaultTimezone },
-                  { label: 'Created', value: formatDate(workspace.createdAt) },
-                ]}
-              />
-            </CardContent>
-          </Card>
+          <WorkspaceSettings initial={workspace} />
         </TabsContent>
         <TabsContent value="team">
           <TeamTab />

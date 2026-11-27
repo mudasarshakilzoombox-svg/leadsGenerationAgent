@@ -1,7 +1,11 @@
 import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DomainError, WorkspaceAccessService, type WorkspacePermission } from '@lga/core';
-import { type AuthedRequest, REQUIRED_PERMISSIONS } from './request-context.js';
+import {
+  ALLOW_RESTRICTED_WORKSPACE,
+  type AuthedRequest,
+  REQUIRED_PERMISSIONS,
+} from './request-context.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const WRITE_RESTRICTED = new Set(['READ_ONLY', 'PENDING_DELETION']);
@@ -11,7 +15,8 @@ const WRITE_RESTRICTED = new Set(['READ_ONLY', 'PENDING_DELETION']);
  * 1. The workspace comes from the path and the user from the session, never from the body.
  * 2. Non-members, unknown ids and closed workspaces get 404 (before any permission check,
  *    so outsiders cannot tell a forbidden workspace from a missing one).
- * 3. Writes to a READ_ONLY or PENDING_DELETION workspace get 403 WORKSPACE_RESTRICTED.
+ * 3. Writes to a READ_ONLY or PENDING_DELETION workspace get 403 WORKSPACE_RESTRICTED, except
+ *    routes marked `@AllowRestrictedWorkspace()` (delete and restore, ADR-0038).
  * 4. `@RequirePermission(...)` is checked against the caller's role, resolved per request.
  */
 @Injectable()
@@ -29,7 +34,15 @@ export class TenantGuard implements CanActivate {
       throw new Error('TenantGuard used on a route without :workspaceId');
 
     const access = await this.access.forUser(req.auth.userId, workspaceId);
-    if (!SAFE_METHODS.has(req.method) && WRITE_RESTRICTED.has(access.workspace.status)) {
+    const allowRestricted = this.reflector.getAllAndOverride<boolean>(ALLOW_RESTRICTED_WORKSPACE, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (
+      !allowRestricted &&
+      !SAFE_METHODS.has(req.method) &&
+      WRITE_RESTRICTED.has(access.workspace.status)
+    ) {
       throw new DomainError('WORKSPACE_RESTRICTED', 'This workspace is read-only right now.');
     }
     const required =

@@ -71,8 +71,10 @@ export class Client {
     this.request('get', path, undefined, headers);
   post = (path: string, body?: unknown, headers?: Record<string, string>) =>
     this.request('post', path, body ?? {}, headers);
-  patch = (path: string, body: unknown) => this.request('patch', path, body);
-  delete = (path: string) => this.request('delete', path);
+  patch = (path: string, body: unknown, headers?: Record<string, string>) =>
+    this.request('patch', path, body, headers);
+  delete = (path: string, body?: unknown, headers?: Record<string, string>) =>
+    this.request('delete', path, body, headers);
 }
 
 export interface TestUser {
@@ -93,9 +95,9 @@ export class Harness {
     readonly mailer: CaptureSystemMailer,
   ) {}
 
-  static async create(): Promise<Harness> {
+  static async create(overrides: Record<string, string> = {}): Promise<Harness> {
     // Expected 4xx responses log at warn; keep test output readable.
-    const env = loadApiEnv({ ...process.env, APP_ENV: 'test', LOG_LEVEL: 'error' });
+    const env = loadApiEnv({ ...process.env, APP_ENV: 'test', LOG_LEVEL: 'error', ...overrides });
     const mailer = new CaptureSystemMailer();
     const app = await createTestApp(env, { providers: [[SYSTEM_MAILER, mailer]] });
     const h = new Harness(app, env, mailer);
