@@ -1,12 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  type OAuthErrorCode,
-  type OAuthPendingLink,
-  OAuthPendingLinkSchema,
-  type OAuthProvider,
-} from '@lga/contracts';
+import { type OAuthPendingLink, OAuthPendingLinkSchema, type OAuthProvider } from '@lga/contracts';
 import { Input } from '@lga/ui/components/input';
 import { CheckCircle2, Loader2, MailCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -16,12 +11,8 @@ import { z } from 'zod';
 import { applyApiError, Field, FormMessage, SubmitButton } from '@/components/forms';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
+import { PROVIDER_LABEL } from '@/lib/auth/oauth-labels';
 import { hardNavigate } from '@/lib/navigate';
-
-export const PROVIDER_LABEL: Record<OAuthProvider, string> = {
-  google: 'Google',
-  microsoft: 'Microsoft',
-};
 
 /** Official brand marks (Google "G", Microsoft four squares), as the brand guidelines show them. */
 export function ProviderLogo({
@@ -104,22 +95,6 @@ export function OAuthButtons({
       </div>
     </div>
   );
-}
-
-const OAUTH_ERRORS: Record<OAuthErrorCode, string> = {
-  oauth_failed: 'We could not sign you in with that account. Please try again.',
-  oauth_cancelled: 'Sign-in was cancelled.',
-  oauth_state: 'That sign-in attempt expired or was opened in another browser. Please start again.',
-  oauth_unverified_email:
-    'That account has no verified email address. Use another account or sign in with email.',
-  oauth_identity_in_use: 'That account is already connected to another user.',
-  oauth_disabled: 'That sign-in method is not available.',
-  oauth_link_expired: 'That sign-in attempt expired. Please start again.',
-};
-
-export function oauthErrorMessage(code: string | undefined): string | null {
-  if (!code) return null;
-  return OAUTH_ERRORS[code as OAuthErrorCode] ?? OAUTH_ERRORS.oauth_failed;
 }
 
 // ------------------------------------------------------------------ /login/link

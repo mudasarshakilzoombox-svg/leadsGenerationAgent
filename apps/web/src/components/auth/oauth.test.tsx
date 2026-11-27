@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { OAuthButtons, oauthErrorMessage } from './oauth';
+import { oauthErrorMessage } from '@/lib/auth/oauth-labels';
+import { OAuthButtons } from './oauth';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 afterEach(cleanup);

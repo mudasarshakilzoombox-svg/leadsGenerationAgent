@@ -1,7 +1,8 @@
 import { OAuthProviderSchema } from '@lga/contracts';
 import type { Metadata } from 'next';
 import { AuthCard } from '@/components/auth/auth-forms';
-import { LinkAccount, PROVIDER_LABEL } from '@/components/auth/oauth';
+import { LinkAccount } from '@/components/auth/oauth';
+import { PROVIDER_LABEL } from '@/lib/auth/oauth-labels';
 
 export const metadata: Metadata = { title: 'Connect account' };
 
