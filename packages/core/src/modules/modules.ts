@@ -1,0 +1,88 @@
+// Nest wiring for the identity, workspace and notification modules (shared by api and worker).
+import { type DynamicModule, Module } from '@nestjs/common';
+import { APP_CONFIG } from '../config/config.module.js';
+import type { ApiEnv, BaseServerEnv, WorkerEnv } from '../config/env.js';
+import { RateLimiter } from '../platform/rate-limit/rate-limiter.js';
+import { AuditService } from './audit/audit.service.js';
+import { AuthService } from './identity/application/auth.service.js';
+import { SessionService } from './identity/application/session.service.js';
+import {
+  BREACHED_PASSWORD_CHECKER,
+  FakeBreachedPasswordChecker,
+  HibpBreachedPasswordChecker,
+} from './identity/infrastructure/breached-passwords.js';
+import {
+  FakeHumanVerifier,
+  HUMAN_VERIFIER,
+  TurnstileHumanVerifier,
+} from './identity/infrastructure/human-verifier.js';
+import { PasswordHasher } from './identity/infrastructure/password-hasher.js';
+import { NotificationDeliveryService } from './notifications/notification-delivery.service.js';
+import { NotificationDispatcher } from './notifications/notification-dispatcher.js';
+import {
+  CaptureSystemMailer,
+  SmtpSystemMailer,
+  SYSTEM_MAILER,
+} from './notifications/system-mailer.js';
+import { InvitationsService } from './workspaces/application/invitations.service.js';
+import { MembersService } from './workspaces/application/members.service.js';
+import { SeatPolicy } from './workspaces/application/seat-policy.js';
+import { WorkspaceService } from './workspaces/application/workspace.service.js';
+
+/** Audit, rate limits and the email dispatcher/deliverer. Requires QueueModule. */
+@Module({})
+export class PlatformServicesModule {
+  static forRoot(): DynamicModule {
+    const providers = [
+      AuditService,
+      RateLimiter,
+      NotificationDispatcher,
+      NotificationDeliveryService,
+      {
+        provide: SYSTEM_MAILER,
+        inject: [APP_CONFIG],
+        useFactory: (env: BaseServerEnv & Partial<Pick<WorkerEnv, 'SMTP_URL' | 'MAIL_FROM'>>) =>
+          env.SMTP_URL
+            ? new SmtpSystemMailer(
+                env.SMTP_URL,
+                env.MAIL_FROM ?? 'Lead Generation Agent <no-reply@localhost>',
+              )
+            : new CaptureSystemMailer(),
+      },
+    ];
+    return { module: PlatformServicesModule, global: true, providers, exports: providers };
+  }
+}
+
+/** Identity (signup, login, sessions) and workspaces (create, members, invitations). API only. */
+@Module({})
+export class IdentityModule {
+  static forRoot(): DynamicModule {
+    const providers = [
+      PasswordHasher,
+      SessionService,
+      AuthService,
+      WorkspaceService,
+      MembersService,
+      InvitationsService,
+      SeatPolicy,
+      {
+        provide: BREACHED_PASSWORD_CHECKER,
+        inject: [APP_CONFIG],
+        useFactory: (env: ApiEnv) =>
+          env.INTEGRATIONS_MODE === 'real'
+            ? new HibpBreachedPasswordChecker()
+            : new FakeBreachedPasswordChecker(),
+      },
+      {
+        provide: HUMAN_VERIFIER,
+        inject: [APP_CONFIG],
+        useFactory: (env: ApiEnv) =>
+          env.INTEGRATIONS_MODE === 'real' && env.TURNSTILE_SECRET_KEY
+            ? new TurnstileHumanVerifier(env.TURNSTILE_SECRET_KEY)
+            : new FakeHumanVerifier(),
+      },
+    ];
+    return { module: IdentityModule, global: true, providers, exports: providers };
+  }
+}

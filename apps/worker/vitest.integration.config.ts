@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     include: ['test/integration/**/*.test.ts'],
     environment: 'node',
+    // Each file starts BullMQ workers on the shared test namespace: one file at a time.
+    fileParallelism: false,
     setupFiles: ['../../infra/scripts/vitest-load-env.ts'],
     testTimeout: 30_000,
     hookTimeout: 30_000,

@@ -22,6 +22,8 @@ pnpm setup            # creates .env with random local-only passwords (never com
 pnpm infra:up         # PostgreSQL 18, Valkey 8, Mailpit (local ports only)
 pnpm db:deploy        # apply migrations as the schema owner
 pnpm db:seed          # plan/role catalogs + sample data (Acme Growth Agency, Northwind Startup)
+# seeded users (e.g. olivia.owner@acme-growth.test) sign in with the dev-only password lga-local-dev-password
+# existing checkout? `pnpm run setup --update` adds new variables (e.g. SESSION_PEPPER) to .env
 pnpm dev              # web, api and worker with live reload
 pnpm smoke            # end-to-end checks against the running dev stack
 ```
@@ -69,6 +71,7 @@ docs/         product, architecture, ADRs
 | `pnpm format` | Prettier |
 | `pnpm db:migrate` | Create/apply a migration in development (`prisma migrate dev`) |
 | `pnpm db:deploy` / `pnpm db:status` | Apply pending migrations / show status |
+| `pnpm run setup --update` | Append variables that `.env.example` has and `.env` lacks (prints names only) |
 | `pnpm db:seed` | Sync plan/role catalogs and load idempotent development data (refused when `APP_ENV=production`; `--catalogs-only` is what deploys run) |
 | `pnpm infra:up` / `infra:down` | Start/stop local services (data is kept) |
 | `pnpm stack:build` / `stack:up` / `stack:smoke` / `stack:down` | Full production-like Docker stack behind nginx on http://localhost:8080 |

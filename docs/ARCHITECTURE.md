@@ -571,8 +571,8 @@ app/
 
 | Area | Endpoints |
 |------|-----------|
-| Auth | `POST /auth/signup`, `/auth/login`, `/auth/logout`, `/auth/verify-email`, `/auth/password/forgot`, `/auth/password/reset`, `GET /auth/oauth/:provider/start`, `/auth/oauth/:provider/callback`, `GET /auth/me`, `/auth/sessions`, `/auth/mfa/*` |
-| Workspaces | `GET/POST /workspaces`, `GET/PATCH/DELETE /workspaces/:workspaceId`, `POST /workspaces/:workspaceId/restore`, `POST /workspaces/:workspaceId/transfer-ownership`, `/workspaces/:workspaceId/members`, `/workspaces/:workspaceId/invitations`, `GET /workspaces/:workspaceId/onboarding` (checklist) |
+| Auth | `POST /auth/signup`, `/auth/login`, `/auth/logout`, `/auth/verify-email` (POST `{token}`), `/auth/verify-email/resend`, `/auth/password/forgot`, `/auth/password/reset`, `/auth/reauthenticate`, `GET /auth/me`, `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `POST /auth/sessions/revoke-others` (implemented, ADR-0034) · later: `GET /auth/oauth/:provider/start`, `/auth/oauth/:provider/callback`, `/auth/mfa/*` |
+| Workspaces | Implemented: `GET/POST /workspaces`, `GET /workspaces/:workspaceId`, `POST /workspaces/:workspaceId/transfer-ownership`, `GET /workspaces/:workspaceId/members`, `PATCH/DELETE …/members/:memberId`, `GET/POST /workspaces/:workspaceId/invitations` (POST needs `Idempotency-Key`), `POST …/invitations/:id/resend`, `DELETE …/invitations/:id`, `GET /invitations/lookup?token=`, `POST /invitations/accept` · later: `PATCH/DELETE /workspaces/:workspaceId`, `POST …/restore`, `GET …/onboarding` |
 | Business | `/business-profiles`, `POST /business-profiles/:id/analyze`, `GET /analysis-runs/:id`, `/business-profiles/:id/offerings` |
 | ICP | `/icps`, `POST /icps/generate`, `POST /icps/:id/activate`, `/icps/:id/personas` |
 | Prospecting | `/discovery-runs`, `/companies`, `/contacts`, `POST /imports` (CSV), `GET /imports/:id` |

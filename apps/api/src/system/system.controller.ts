@@ -2,7 +2,9 @@ import { Controller, Get, Inject } from '@nestjs/common';
 import type { SystemInfo } from '@lga/contracts';
 import { type ApiEnv, APP_CONFIG } from '@lga/core';
 import { APP_NAME } from '@lga/shared';
+import { Public } from '../auth/request-context.js';
 
+@Public()
 @Controller('system')
 export class SystemController {
   constructor(@Inject(APP_CONFIG) private readonly env: ApiEnv) {}

@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Next in Phase 0: identity, tenancy and RBAC (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). Next in Phase 0: auth and workspace UI, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -12,7 +12,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 A multi-tenant B2B SaaS that analyzes a customer's website, generates an Ideal Customer Profile, discovers and verifies prospects through approved data providers, scores them, writes personalized outreach with AI, runs compliant email sequences from the customer's own mailboxes, classifies replies, assists with meeting booking and reports analytics.
 
-Key product terms: **Workspace** = tenant (`workspaces` table). Roles: **Owner** (exactly one), **Admin**, **Member**, plus the platform role **Super Admin**. **Business profile** = a business being marketed (an agency's clients are business profiles). **Credits** pay for verification, AI drafts, suggested replies and research. Reply classification and compliance processing are always free. The project is optimized for **low running cost** (PRD §2). Prefer free or low tiers and avoid adding paid services without approval.
+Key product terms: **Workspace** = tenant (`workspaces` table). Roles: **Owner** (exactly one), **Admin**, **Member**, **Read-only** (`READ_ONLY`, ADR-0034), plus the platform role **Super Admin**. **Business profile** = a business being marketed (an agency's clients are business profiles). **Credits** pay for verification, AI drafts, suggested replies and research. Reply classification and compliance processing are always free. The project is optimized for **low running cost** (PRD §2). Prefer free or low tiers and avoid adding paid services without approval.
 
 ## Source-of-truth documents (read before changing related code)
 
@@ -86,6 +86,8 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 
 - Every tenant table has `workspace_id`. Every query is tenant-scoped. Look up by `{ id, workspaceId }`, never by `id` alone.
 - Access tenant data through the client from `WorkspaceAccessService.forUser()` (`createTenantClient`), never the base `PrismaService`, outside an audited system context. Every new model must be classified in `MODEL_SCOPES` (`packages/core/src/tenancy/tenant-models.ts`). Tenant-to-tenant relations are composite `(workspaceId, xId)` foreign keys with an explicit `onDelete` (never SetNull) (ADR-0033).
+- Every route needs a session unless it is marked `@Public()` (global `SessionGuard`). Tenant routes use `@UseGuards(TenantGuard)`, and every mutating tenant route declares `@RequirePermission(...)` (or `@SelfService()` when the service checks the target). `apps/api/test/route-security.test.ts` enforces this. Use `@RequireVerifiedEmail()` for credit spend, sending and inviting, and `@RequireRecentAuth()` for sensitive actions.
+- Auth emails go through `NotificationDispatcher` (IDs only). The worker mints tokens at send time. Never put a raw token in the DB, a job or a log.
 - Plans and roles are code catalogs (`platform/billing/plans.ts`, `platform/tenancy/permissions.ts`) synced into the `plans`/`roles` tables by the migrate container. Change the code, not the rows.
 - Tenant routes live under `/api/v1/workspaces/:workspaceId/...` behind `TenantGuard`. Check **permissions** (`@RequirePermission('campaign.launch')`), not role names. The permission matrix is SECURITY.md §3.2.
 - Respect the launch-approval setting (`launchRequiresApproval`, default ON). Never add a path that lets a Member's campaign send without approval when it is ON.

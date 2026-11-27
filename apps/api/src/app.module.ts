@@ -9,11 +9,15 @@ import {
   type ApiEnv,
   AppConfigModule,
   DatabaseModule,
+  IdentityModule,
   LoggingModule,
   OriginCheckMiddleware,
+  PlatformServicesModule,
   ProblemDetailsFilter,
+  QueueModule,
   RedisModule,
 } from '@lga/core';
+import { AuthApiModule } from './auth/auth.module.js';
 import { HealthModule } from './health/health.module.js';
 import { SystemModule } from './system/system.module.js';
 
@@ -27,8 +31,12 @@ export class AppModule implements NestModule {
         LoggingModule.forRoot('api'),
         DatabaseModule.forRoot(),
         RedisModule.forRoot(),
+        QueueModule.forRoot(),
+        PlatformServicesModule.forRoot(),
+        IdentityModule.forRoot(),
         HealthModule,
         SystemModule,
+        AuthApiModule,
       ],
       providers: [{ provide: APP_FILTER, useClass: ProblemDetailsFilter }],
     };

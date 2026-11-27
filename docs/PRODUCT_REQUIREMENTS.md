@@ -119,42 +119,45 @@ These resolve the open questions in ARCHITECTURE.md §19 with the **lowest-cost,
 | **Workspace Owner** | One workspace | The person who created the workspace (transferable) | Full control including billing, deletion and ownership transfer. Exactly one Owner per workspace. |
 | **Workspace Admin** | One workspace | Team leads, ops managers, agency account managers | Manages members, integrations, mailboxes, compliance and approvals. No billing ownership or deletion. |
 | **Team Member** | One workspace | SDRs, freelancers' assistants, agency staff | Does the daily work: prospects, campaigns, drafts, inbox. Launching a campaign needs approval when the workspace requires it. |
+| **Read-only** | One workspace | Stakeholders, reviewers, finance, agency clients who only watch | Can view the workspace's data and analytics. Cannot change anything, spend credits, export contacts or see the audit log (ADR-0034). |
 
 A user can hold different roles in different workspaces.
 
 ### 4.2 Permission matrix
 
-| Capability | Super Admin | Owner | Admin | Member |
-|-----------|:-----------:|:-----:|:-----:|:------:|
-| View all workspaces, suspend or restore workspaces, adjust credits | ✅ | — | — | — |
-| Global kill switches (pause sending, disable AI or a provider) | ✅ | — | — | — |
-| Support impersonation (read-only, time-boxed, audited, visible to workspace) | ✅ | — | — | — |
-| Delete workspace, transfer ownership | — | ✅ | — | — |
-| Manage subscription, payment method, invoices, buy credits | — | ✅ | — | — |
-| Invite or remove members, change roles (not Owner) | — | ✅ | ✅ | — |
-| Workspace settings (name, address, privacy notice, defaults) | — | ✅ | ✅ | — |
-| Connect data-provider keys (BYOK), calendars, booking tools | — | ✅ | ✅ | — |
-| Connect **own** mailbox | — | ✅ | ✅ | ✅ |
-| Manage or disconnect **any** mailbox, sending domains | — | ✅ | ✅ | — |
-| Compliance: suppression list, country policy, DSAR requests | — | ✅ | ✅ | — |
-| View audit log | — | ✅ | ✅ | — |
-| Export contacts and leads (CSV) | — | ✅ | ✅ | — |
-| Create and edit business profiles, run website analysis | — | ✅ | ✅ | ✅ |
-| Generate, edit and activate ICPs | — | ✅ | ✅ | ✅ |
-| Run discovery, import CSV, enrich, verify (spends credits) | — | ✅ | ✅ | ✅ |
-| Create and edit campaigns, generate and edit drafts | — | ✅ | ✅ | ✅ |
-| Approve email drafts | — | ✅ | ✅ | ✅ (own campaigns) |
-| **Launch** campaign | — | ✅ | ✅ | ✅ only if "launch approval" is off. Otherwise submits for approval |
-| **Approve** campaign launch requests | — | ✅ | ✅ | — |
-| Reply from inbox, reassign threads, override classifications | — | ✅ | ✅ | ✅ |
-| View analytics | — | ✅ | ✅ | ✅ |
+| Capability | Super Admin | Owner | Admin | Member | Read-only |
+|-----------|:-----------:|:-----:|:-----:|:------:|:---------:|
+| View all workspaces, suspend or restore workspaces, adjust credits | ✅ | — | — | — | — |
+| Global kill switches (pause sending, disable AI or a provider) | ✅ | — | — | — | — |
+| Support impersonation (read-only, time-boxed, audited, visible to workspace) | ✅ | — | — | — | — |
+| View workspace data (business profiles, ICPs, leads, campaigns, inbox, meetings, members) | — | ✅ | ✅ | ✅ | ✅ |
+| Delete workspace, transfer ownership | — | ✅ | — | — | — |
+| Manage subscription, payment method, invoices, buy credits | — | ✅ | — | — | — |
+| Invite or remove members, change roles (not Owner) | — | ✅ | ✅ | — | — |
+| Workspace settings (name, address, privacy notice, defaults) | — | ✅ | ✅ | — | — |
+| Connect data-provider keys (BYOK), calendars, booking tools | — | ✅ | ✅ | — | — |
+| Connect **own** mailbox | — | ✅ | ✅ | ✅ | — |
+| Manage or disconnect **any** mailbox, sending domains | — | ✅ | ✅ | — | — |
+| Compliance: suppression list, country policy, DSAR requests | — | ✅ | ✅ | — | — |
+| View audit log | — | ✅ | ✅ | — | — |
+| Export contacts and leads (CSV) | — | ✅ | ✅ | — | — |
+| Create and edit business profiles, run website analysis | — | ✅ | ✅ | ✅ | — |
+| Generate, edit and activate ICPs | — | ✅ | ✅ | ✅ | — |
+| Run discovery, import CSV, enrich, verify (spends credits) | — | ✅ | ✅ | ✅ | — |
+| Create and edit campaigns, generate and edit drafts | — | ✅ | ✅ | ✅ | — |
+| Approve email drafts | — | ✅ | ✅ | ✅ (own campaigns) | — |
+| **Launch** campaign | — | ✅ | ✅ | ✅ only if "launch approval" is off. Otherwise submits for approval | — |
+| **Approve** campaign launch requests | — | ✅ | ✅ | — | — |
+| Reply from inbox, reassign threads, override classifications | — | ✅ | ✅ | ✅ | — |
+| View analytics | — | ✅ | ✅ | ✅ | ✅ |
 
 Rules:
 - A workspace always has exactly one Owner. Transferring ownership turns the old Owner into an Admin.
 - Admins cannot remove or demote the Owner, or other Admins' access to billing (which they don't have).
 - Role changes take effect on the user's next request and are audited.
 - Super Admin access to customer data happens only through audited impersonation.
-- Future: **Viewer/Client** role (read-only analytics, optionally restricted to one business profile) for agency clients.
+- Read-only members count toward seats. They can be invited or set by an Owner or Admin, and can leave at any time.
+- Future: **Viewer/Client** role (analytics only, optionally restricted to one business profile) for agency clients.
 
 ---
 

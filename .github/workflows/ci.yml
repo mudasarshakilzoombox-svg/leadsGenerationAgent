@@ -50,6 +50,8 @@ jobs:
       DATABASE_URL: postgresql://lga_owner:ci-only-password@localhost:5432/lga
       DATABASE_MIGRATOR_URL: postgresql://lga_owner:ci-only-password@localhost:5432/lga
       VALKEY_URL: redis://localhost:6379/0
+      SESSION_PEPPER: ci-only-session-pepper-not-a-secret-0001
+      EMAIL_HASH_PEPPER: ci-only-email-pepper-not-a-secret-00001
 
     steps:
       - uses: actions/checkout@v4

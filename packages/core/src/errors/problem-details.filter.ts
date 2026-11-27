@@ -36,6 +36,10 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     }
 
     if (res.headersSent) return;
+    const retryAfter = problem.retryAfterSeconds;
+    if (typeof retryAfter === 'number' && retryAfter > 0) {
+      res.setHeader('Retry-After', String(Math.ceil(retryAfter)));
+    }
     res.status(problem.status).type(PROBLEM_CONTENT_TYPE).json(problem);
   }
 }

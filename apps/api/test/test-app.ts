@@ -18,6 +18,8 @@ export function testEnv(overrides: Record<string, string> = {}): ApiEnv {
     APP_ORIGIN: TEST_ORIGIN,
     DATABASE_URL: 'postgresql://test:test@127.0.0.1:1/test',
     VALKEY_URL: 'redis://127.0.0.1:1/0',
+    SESSION_PEPPER: 'test-only-session-pepper-0123456789abcdef',
+    EMAIL_HASH_PEPPER: 'test-only-email-pepper-0123456789abcdefgh',
     ...overrides,
   });
 }
@@ -25,6 +27,8 @@ export function testEnv(overrides: Record<string, string> = {}): ApiEnv {
 export interface Fakes {
   prisma?: unknown;
   redis?: unknown;
+  /** Extra provider overrides, e.g. `[[SYSTEM_MAILER, captureMailer]]`. */
+  providers?: Array<[token: unknown, value: unknown]>;
 }
 
 /** Build the real HTTP pipeline. Pass fakes to run without PostgreSQL/Valkey. */
@@ -32,6 +36,9 @@ export async function createTestApp(env: ApiEnv, fakes?: Fakes): Promise<INestAp
   let builder = Test.createTestingModule({ imports: [AppModule.forRoot(env)] });
   if (fakes?.prisma) builder = builder.overrideProvider(PrismaService).useValue(fakes.prisma);
   if (fakes?.redis) builder = builder.overrideProvider(REDIS).useValue(fakes.redis);
+  for (const [token, value] of fakes?.providers ?? []) {
+    builder = builder.overrideProvider(token as symbol).useValue(value);
+  }
   const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>({

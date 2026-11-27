@@ -3,6 +3,7 @@ import {
   AppConfigModule,
   DatabaseModule,
   LoggingModule,
+  PlatformServicesModule,
   QueueModule,
   RedisModule,
   type WorkerEnv,
@@ -23,6 +24,7 @@ export class WorkerModule {
         DatabaseModule.forRoot(),
         RedisModule.forRoot(),
         QueueModule.forRoot(),
+        PlatformServicesModule.forRoot(),
       ],
       providers: [
         HeartbeatProcessor,

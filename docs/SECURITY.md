@@ -80,35 +80,36 @@ External attackers, malicious or compromised tenant users, abusive customers (sp
 
 Permissions are checked in code with `@RequirePermission(...)`. Roles map to permission sets. This matrix implements PRD §4.2.
 
-| Permission | Super Admin¹ | Owner | Admin | Member |
-|-----------|:-----------:|:-----:|:-----:|:------:|
-| `platform.workspaces.manage` (view all, standing, suspend, credit adjustments, limit overrides) | ✅ | — | — | — |
-| `platform.killswitch` (pause sending globally, per workspace or per mailbox, disable AI or a provider) | ✅ | — | — | — |
-| `platform.impersonate` (read-only, time-boxed, audited) | ✅ | — | — | — |
-| `workspace.delete`, `workspace.transfer_ownership` | — | ✅ | — | — |
-| `billing.manage` (plan, payment method, invoices, credit packs) | — | ✅ | — | — |
-| `members.manage` (invite, Admin↔Member role change, remove. Never the Owner) | — | ✅ | ✅ | — |
-| `workspace.settings` (address, privacy notice, defaults, launch-approval toggle) | — | ✅ | ✅ | — |
-| `integrations.manage` (BYOK data keys, calendars, booking tools) | — | ✅ | ✅ | — |
-| `mailboxes.connect_own` | — | ✅ | ✅ | ✅ |
-| `mailboxes.manage_all`, `sending_domains.manage` | — | ✅ | ✅ | — |
-| `compliance.manage` (suppressions, country policy, DSAR) | — | ✅ | ✅ | — |
-| `audit.view` | — | ✅ | ✅ | — |
-| `contacts.export` (CSV exports of leads, results, meetings) | — | ✅ | ✅ | — |
-| `business.edit`, `icp.edit` | — | ✅ | ✅ | ✅ |
-| `prospects.discover`, `prospects.import`, `contacts.enrich`, `contacts.verify` (spend credits) | — | ✅ | ✅ | ✅ |
-| `campaigns.edit`, `drafts.generate` | — | ✅ | ✅ | ✅ |
-| `drafts.approve` | — | ✅ | ✅ | ✅² |
-| `campaigns.launch` | — | ✅ | ✅ | ✅³ |
-| `campaigns.submit_for_approval` | — | ✅ | ✅ | ✅ |
-| `campaigns.approve_launch` | — | ✅ | ✅ | — |
-| `inbox.reply`, `inbox.assign`, `classifications.override` | — | ✅ | ✅ | ✅ |
-| `meetings.manage` | — | ✅ | ✅ | ✅ |
-| `analytics.view` | — | ✅ | ✅ | ✅ |
+| Permission | Super Admin¹ | Owner | Admin | Member | Read-only⁴ |
+|-----------|:-----------:|:-----:|:-----:|:------:|:---------:|
+| `platform.workspaces.manage` (view all, standing, suspend, credit adjustments, limit overrides) | ✅ | — | — | — | — |
+| `platform.killswitch` (pause sending globally, per workspace or per mailbox, disable AI or a provider) | ✅ | — | — | — | — |
+| `platform.impersonate` (read-only, time-boxed, audited) | ✅ | — | — | — | — |
+| `workspace.delete`, `workspace.transfer_ownership` | — | ✅ | — | — | — |
+| `billing.manage` (plan, payment method, invoices, credit packs) | — | ✅ | — | — | — |
+| `members.manage` (invite, role change among Admin/Member/Read-only, remove. Never the Owner) | — | ✅ | ✅ | — | — |
+| `workspace.settings` (address, privacy notice, defaults, launch-approval toggle) | — | ✅ | ✅ | — | — |
+| `integrations.manage` (BYOK data keys, calendars, booking tools) | — | ✅ | ✅ | — | — |
+| `mailboxes.connect_own` | — | ✅ | ✅ | ✅ | — |
+| `mailboxes.manage_all`, `sending_domains.manage` | — | ✅ | ✅ | — | — |
+| `compliance.manage` (suppressions, country policy, DSAR) | — | ✅ | ✅ | — | — |
+| `audit.view` | — | ✅ | ✅ | — | — |
+| `contacts.export` (CSV exports of leads, results, meetings) | — | ✅ | ✅ | — | — |
+| `business.edit`, `icp.edit` | — | ✅ | ✅ | ✅ | — |
+| `prospects.discover`, `prospects.import`, `contacts.enrich`, `contacts.verify` (spend credits) | — | ✅ | ✅ | ✅ | — |
+| `campaigns.edit`, `drafts.generate` | — | ✅ | ✅ | ✅ | — |
+| `drafts.approve` | — | ✅ | ✅ | ✅² | — |
+| `campaigns.launch` | — | ✅ | ✅ | ✅³ | — |
+| `campaigns.submit_for_approval` | — | ✅ | ✅ | ✅ | — |
+| `campaigns.approve_launch` | — | ✅ | ✅ | — | — |
+| `inbox.reply`, `inbox.assign`, `classifications.override` | — | ✅ | ✅ | ✅ | — |
+| `meetings.manage` | — | ✅ | ✅ | ✅ | — |
+| `analytics.view` | — | ✅ | ✅ | ✅ | ✅ |
 
 ¹ Super Admin is a platform role, not a workspace role. It reaches customer data **only** through audited impersonation, never through ordinary membership.
 ² Members approve drafts only in campaigns they created or are assigned to.
 ³ Only when the workspace setting `launchRequiresApproval` is OFF. It defaults to ON (PRD WS-06), in which case Members use `campaigns.submit_for_approval`.
+⁴ `READ_ONLY` (ADR-0034): membership already allows reading workspace data. Its only permission is `analytics.view`, so it can never change data, spend credits, export or read the audit log, and new write permissions are denied to it by default.
 
 Rules:
 - **Exactly one Owner per workspace**, enforced by a partial unique index. Ownership transfer requires re-authentication and swaps roles atomically, so the old Owner becomes Admin.

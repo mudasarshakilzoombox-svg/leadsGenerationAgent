@@ -41,7 +41,7 @@ export const WORKSPACE_PERMISSIONS = [
 ] as const;
 export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];
 
-export const ROLE_KEYS = ['OWNER', 'ADMIN', 'MEMBER'] as const;
+export const ROLE_KEYS = ['OWNER', 'ADMIN', 'MEMBER', 'READ_ONLY'] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
 const OWNER_ONLY: readonly WorkspacePermission[] = [
@@ -68,6 +68,12 @@ const ADMIN_ONLY: readonly WorkspacePermission[] = [
 const ALL = WORKSPACE_PERMISSIONS;
 const ADMIN = ALL.filter((p) => !OWNER_ONLY.includes(p));
 const MEMBER = ADMIN.filter((p) => !ADMIN_ONLY.includes(p) && !MEMBER_CONDITIONAL.includes(p));
+/**
+ * READ_ONLY (ADR-0034): workspace membership already grants reading workspace data. Every other
+ * permission is a change, a credit spend or a sensitive read (exports, audit log), so it has none
+ * of them. New write permissions are therefore denied to READ_ONLY by default.
+ */
+const READ_ONLY: readonly WorkspacePermission[] = ['analytics.view'];
 
 export interface RoleDefinition {
   name: string;
@@ -95,6 +101,13 @@ export const ROLES = {
     description: 'Builds and runs campaigns. Launches need approval while launch approval is on.',
     permissions: MEMBER,
     sortOrder: 2,
+  },
+  READ_ONLY: {
+    name: 'Read-only',
+    description:
+      'Can view workspace data and analytics. Cannot change anything, spend credits or export.',
+    permissions: READ_ONLY,
+    sortOrder: 3,
   },
 } as const satisfies Record<RoleKey, RoleDefinition>;
 

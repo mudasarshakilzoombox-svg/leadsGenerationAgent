@@ -92,6 +92,9 @@ services:
       API_PORT: '4000'
       API_HOST: 0.0.0.0
       TRUST_PROXY: loopback, linklocal, uniquelocal
+      SESSION_PEPPER: ${SESSION_PEPPER:?set SESSION_PEPPER in .env (pnpm run setup --update)}
+      EMAIL_HASH_PEPPER: ${EMAIL_HASH_PEPPER:?set EMAIL_HASH_PEPPER in .env (pnpm run setup --update)}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       NODE_OPTIONS: --max-old-space-size=512
     tmpfs: [/tmp]
     depends_on:
@@ -121,6 +124,9 @@ services:
       WORKER_HEALTH_HOST: 0.0.0.0
       WORKER_CONCURRENCY_FACTOR: ${WORKER_CONCURRENCY_FACTOR:-1}
       HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-60000}
+      # System email relay. Unset in the local stack = emails are only logged.
+      SMTP_URL: ${STACK_SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-Lead Generation Agent <no-reply@localhost>}
       NODE_OPTIONS: --max-old-space-size=1024
     tmpfs: [/tmp]
     depends_on:

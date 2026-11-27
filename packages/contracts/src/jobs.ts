@@ -3,12 +3,14 @@ import { z } from 'zod';
 /** BullMQ queue names (docs/architecture/06-background-jobs.md §2). */
 export const QUEUE_NAMES = {
   system: 'system',
+  notifications: 'notifications',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
 /** Job names use `domain.action`. */
 export const JOB_NAMES = {
   systemHeartbeat: 'system.heartbeat',
+  notifyEmail: 'notify.email',
 } as const;
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
 
@@ -32,3 +34,22 @@ export const JobEnvelopeSchema = z
   .strict();
 export type JobEnvelope = z.infer<typeof JobEnvelopeSchema>;
 export type JobEnvelopeInput = z.input<typeof JobEnvelopeSchema>;
+
+/**
+ * System (transactional) email templates. Recipients are always users or invitations,
+ * never contacts (ADR-0008). Tokens are minted by the worker at send time (ADR-0034).
+ */
+export const EMAIL_TEMPLATES = [
+  'auth.verify_email',
+  'auth.signup_existing',
+  'auth.password_reset',
+  'auth.password_changed',
+  'auth.new_device',
+  'auth.account_locked',
+  'workspace.invitation',
+] as const;
+export const EmailTemplateSchema = z.enum(EMAIL_TEMPLATES);
+export type EmailTemplate = z.infer<typeof EmailTemplateSchema>;
+
+/** `args` of a `notify.email` job: identifiers only. */
+export const NotifyEmailArgsSchema = z.strictObject({ template: EmailTemplateSchema });

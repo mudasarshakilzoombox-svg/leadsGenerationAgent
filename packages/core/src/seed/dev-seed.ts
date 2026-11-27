@@ -1,8 +1,9 @@
 // Development seed data: two workspaces with a realistic slice of every area.
 // - Idempotent: fixed ids + createMany({ skipDuplicates }), so a re-run inserts nothing.
 // - No real people or credentials: reserved .test/.example domains, encrypted fields left null,
-//   no password hashes (sign-in arrives with the identity module).
+//   seed users share the dev-only password DEV_SEED_PASSWORD (the seed is refused in production).
 import { createHash } from 'node:crypto';
+import { PasswordHasher } from '../modules/identity/infrastructure/password-hasher.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 
 /** Deterministic, valid UUIDs: group (entity type) + sequence number. */
@@ -13,6 +14,9 @@ export function seedId(group: number, n: number): string {
 const sha256 = (value: string) => Uint8Array.from(createHash('sha256').update(value).digest());
 const sha256Hex = (value: string) => createHash('sha256').update(value).digest('hex');
 const DAY = 86_400_000;
+
+/** Local development only: every seeded user signs in with this password. */
+export const DEV_SEED_PASSWORD = 'lga-local-dev-password';
 
 export const SEED = {
   users: {
@@ -1549,6 +1553,12 @@ export async function seedDevData(prisma: PrismaClient, now = new Date()): Promi
       ],
     }),
   );
+
+  // Only fills users without a password, so a re-run never resets a changed password.
+  await prisma.user.updateMany({
+    where: { id: { in: Object.values(U) }, passwordHash: null },
+    data: { passwordHash: await new PasswordHasher().hash(DEV_SEED_PASSWORD) },
+  });
 
   return { workspaces: 2, users: 5, inserted };
 }

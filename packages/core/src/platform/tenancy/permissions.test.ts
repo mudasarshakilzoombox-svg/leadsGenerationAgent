@@ -50,6 +50,12 @@ describe('permission matrix (SECURITY.md §3.2)', () => {
     }
   });
 
+  it('gives READ_ONLY no write, spend, export or audit permission, regardless of settings', () => {
+    for (const ctx of [approvalOn, approvalOff]) {
+      expect([...resolvePermissions('READ_ONLY', ctx)]).toEqual(['analytics.view']);
+    }
+  });
+
   it('fails closed for unknown roles', () => {
     expect(resolvePermissions('SUPER_ADMIN', approvalOff).size).toBe(0);
     expect(resolvePermissions('owner', approvalOff).size).toBe(0);

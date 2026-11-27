@@ -1,6 +1,15 @@
 # 08. Authentication
 
 > Status: Draft for review · Related: [ADR-0007](adr/ADR-0007-opaque-server-sessions.md), [ADR-0016](adr/ADR-0016-workspace-roles-rbac.md), [SECURITY.md](../SECURITY.md) §3, PRD AUTH-01 to AUTH-08
+>
+> **Implemented (2026-11-27):** email/password signup, verification, login, sessions, step-up, reset, workspaces, invitations, members and the `READ_ONLY` role. [ADR-0034](adr/ADR-0034-auth-implementation-and-read-only-role.md) records where the implementation settles open points:
+> - The session starts at verification, not signup.
+> - Verification is `POST`.
+> - The worker mints tokens at send time.
+> - The progressive delay is `429` + `Retry-After`.
+> - SMTP is used for system mail.
+>
+> OAuth (§4.3), email change (§4.5) and MFA (§9) are not built yet.
 
 ## 1. Identity model
 

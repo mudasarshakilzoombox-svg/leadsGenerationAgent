@@ -1,29 +1,60 @@
-// First-time local setup: create .env from .env.example with random local-only passwords.
-// Safe to re-run: an existing .env is never overwritten.
+// Local setup: create .env from .env.example with random local-only secrets.
+//   pnpm setup            -> create .env if it does not exist (never overwrites)
+//   pnpm run setup --update   -> append variables that .env.example has and .env lacks
+// Values are never printed: only variable names.
 import { randomBytes } from 'node:crypto';
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const target = path.join(root, '.env');
 const example = path.join(root, '.env.example');
 
-if (existsSync(target)) {
-  console.log('.env already exists, leaving it unchanged.');
+// 32 random bytes, URL-safe: long enough for passwords and for the auth peppers (>= 32 chars).
+const secret = () => randomBytes(32).toString('base64url');
+
+/** Replace `change-me-local-*` placeholders with random values (same placeholder, same value). */
+function fillPlaceholders(text) {
+  const replacements = new Map();
+  const filled = text.replace(/change-me-local-[a-z]+/g, (placeholder) => {
+    if (!replacements.has(placeholder)) replacements.set(placeholder, secret());
+    return replacements.get(placeholder);
+  });
+  return { filled, count: replacements.size };
+}
+
+const exampleText = readFileSync(example, 'utf8');
+
+if (!existsSync(target)) {
+  const { filled, count } = fillPlaceholders(exampleText);
+  writeFileSync(target, filled);
+  console.log(`Created .env with ${count} random local secrets.`);
+  console.log('Next: pnpm infra:up && pnpm db:deploy && pnpm db:seed && pnpm dev');
   process.exit(0);
 }
 
-copyFileSync(example, target);
+if (!process.argv.includes('--update')) {
+  console.log(
+    '.env already exists, leaving it unchanged. Run `pnpm run setup --update` to add new variables.',
+  );
+  process.exit(0);
+}
 
-// Replace the `change-me-local-*` placeholders with random URL-safe values (same value everywhere).
-const secret = () => randomBytes(18).toString('base64url');
-const replacements = new Map();
-let content = readFileSync(target, 'utf8');
-content = content.replace(/change-me-local-[a-z]+/g, (placeholder) => {
-  if (!replacements.has(placeholder)) replacements.set(placeholder, secret());
-  return replacements.get(placeholder);
+const present = new Set(
+  readFileSync(target, 'utf8')
+    .split(/\r?\n/)
+    .map((line) => /^\s*([A-Z0-9_]+)\s*=/.exec(line)?.[1])
+    .filter(Boolean),
+);
+const missing = exampleText.split(/\r?\n/).filter((line) => {
+  const key = /^([A-Z0-9_]+)=/.exec(line)?.[1];
+  return key && !present.has(key);
 });
-writeFileSync(target, content);
 
-console.log(`Created .env with ${replacements.size} random local passwords.`);
-console.log('Next: pnpm infra:up && pnpm db:deploy && pnpm dev');
+if (missing.length === 0) {
+  console.log('.env already has every variable from .env.example.');
+  process.exit(0);
+}
+const { filled } = fillPlaceholders(missing.join('\n'));
+appendFileSync(target, `\n# Added by pnpm run setup --update\n${filled}\n`);
+console.log(`Added to .env: ${missing.map((line) => line.split('=')[0]).join(', ')}`);

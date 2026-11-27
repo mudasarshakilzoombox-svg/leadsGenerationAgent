@@ -11,6 +11,7 @@ import {
   createJobEnvelope,
   createRedis,
   jobId,
+  NotificationDeliveryService,
   QueueRegistry,
   queuePrefix,
   type ValkeyClient,
@@ -21,7 +22,10 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { HeartbeatProcessor } from '../processors/heartbeat.processor.js';
 
 /** Base concurrency per queue (06-background-jobs §2), scaled by WORKER_CONCURRENCY_FACTOR. */
-const BASE_CONCURRENCY: Record<QueueName, number> = { [QUEUE_NAMES.system]: 1 };
+const BASE_CONCURRENCY: Record<QueueName, number> = {
+  [QUEUE_NAMES.system]: 1,
+  [QUEUE_NAMES.notifications]: 2,
+};
 
 /**
  * Owns the BullMQ workers and repeatable schedules of this process.
@@ -36,12 +40,14 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
     @Inject(APP_CONFIG) private readonly env: WorkerEnv,
     private readonly queues: QueueRegistry,
     private readonly heartbeat: HeartbeatProcessor,
+    private readonly notifications: NotificationDeliveryService,
     @InjectPinoLogger(WorkerRuntime.name) private readonly logger: PinoLogger,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
     this.connection = createRedis(this.env.VALKEY_URL, 'queue-worker');
     this.startWorker(QUEUE_NAMES.system, (job) => this.processSystem(job));
+    this.startWorker(QUEUE_NAMES.notifications, (job) => this.processNotifications(job));
     await this.registerSchedules();
   }
 
@@ -87,6 +93,20 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
         return;
       default:
         throw new UnrecoverableError(`Unknown job "${job.name}" on queue ${QUEUE_NAMES.system}`);
+    }
+  }
+
+  /** `notify.email`: system email. Errors are retried with backoff (attempts set by the producer). */
+  private async processNotifications(job: Job): Promise<void> {
+    const envelope = JobEnvelopeSchema.parse(job.data);
+    switch (job.name) {
+      case JOB_NAMES.notifyEmail:
+        await this.notifications.deliver(envelope);
+        return;
+      default:
+        throw new UnrecoverableError(
+          `Unknown job "${job.name}" on queue ${QUEUE_NAMES.notifications}`,
+        );
     }
   }
 

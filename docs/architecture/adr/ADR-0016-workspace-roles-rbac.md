@@ -1,6 +1,6 @@
 # ADR-0016: Three workspace roles with permission-based RBAC
 
-- **Status:** Proposed · **Date:** 2026-11-26 · **Maps to:** AD-17, PRD §4
+- **Status:** Accepted, amended by [ADR-0034](ADR-0034-auth-implementation-and-read-only-role.md) (adds the `READ_ONLY` role) · **Date:** 2026-11-26 · **Maps to:** AD-17, PRD §4
 
 ## Context
 The PRD defines Platform Super Admin, Workspace Owner, Workspace Admin and Team Member. Future roles (Viewer/Client) and possibly custom roles must not require rewriting checks.
