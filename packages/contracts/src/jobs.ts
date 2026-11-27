@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const QUEUE_NAMES = {
   system: 'system',
   notifications: 'notifications',
+  ai: 'ai',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
@@ -11,6 +12,8 @@ export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 export const JOB_NAMES = {
   systemHeartbeat: 'system.heartbeat',
   notifyEmail: 'notify.email',
+  /** Runs `system.selftest` through AiActionPipeline: proves routing, provider and metering. */
+  aiSelftest: 'ai.selftest',
 } as const;
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
 

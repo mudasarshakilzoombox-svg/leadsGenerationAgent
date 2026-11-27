@@ -8,3 +8,6 @@ packages/core/src/generated
 packages/core/prisma/migrations/**/*.sql
 docs
 *.md
+
+# Local AI eval reports (pnpm ai:eval)
+packages/core/test/ai-evals/reports/

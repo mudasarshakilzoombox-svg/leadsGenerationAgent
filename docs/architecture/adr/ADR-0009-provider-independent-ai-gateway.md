@@ -1,6 +1,6 @@
 # ADR-0009: Provider-independent AI gateway with task-tier routing
 
-- **Status:** Proposed · **Date:** 2026-11-26 · **Maps to:** AD-09
+- **Status:** Accepted · **Date:** 2026-11-26 · **Maps to:** AD-09 · **Implemented:** 2026-11-27, see [ADR-0037](ADR-0037-ai-gateway-implementation.md)
 
 ## Context
 We use LLMs for extraction, ICP generation, copywriting and classification. Prices, quality and availability change often. We need cost control per workspace, provider features (prompt caching, batch APIs, structured output) and fallback during outages.

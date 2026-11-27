@@ -1,0 +1,11 @@
+# Internal AI cost per million tokens in USD (05-ai-orchestration §10). Reviewed monthly against the
+# providers' own reports. This is our cost, not the customer price (credits, PRD §8.4).
+# cost_micros = round(((input - cached) * input + cached * cachedInput + output * output) / 1e6 * 1e6)
+version: 1
+
+models:
+  claude-haiku-5-5: { input: 0.10, cachedInput: 0.01, output: 0.50 }
+  claude-sonnet-5-5: { input: 2.00, cachedInput: 0.10, output: 10.00 }
+  claude-opus-5-5: { input: 4.00, cachedInput: 0.20, output: 20.00 }
+  # The fake provider costs nothing but goes through the same accounting path.
+  fake-model: { input: 0, cachedInput: 0, output: 0 }

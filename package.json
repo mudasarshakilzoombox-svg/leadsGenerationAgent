@@ -30,7 +30,9 @@
     "stack:build": "node infra/scripts/build-images.mjs",
     "stack:up": "docker compose --env-file .env -f infra/docker/compose.prod.yml up -d --wait",
     "stack:down": "docker compose --env-file .env -f infra/docker/compose.prod.yml down",
-    "stack:smoke": "node infra/scripts/smoke.mjs --web http://localhost:8080 --api http://localhost:8080"
+    "stack:smoke": "node infra/scripts/smoke.mjs --web http://localhost:8080 --api http://localhost:8080",
+    "ai:eval": "turbo run build --filter=@lga/core --output-logs=errors-only && pnpm --filter @lga/core ai:eval",
+    "ai:selftest": "turbo run build --filter=@lga/worker --output-logs=errors-only && pnpm --filter @lga/worker ai:selftest"
   },
   "devDependencies": {
     "@swc/cli": "0.8.2",

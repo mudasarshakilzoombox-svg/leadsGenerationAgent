@@ -31,6 +31,14 @@ const baseShape = {
   /** HMAC key ring for unsubscribe links (ADR-0024): JSON `{"1":"<base64 >= 32 bytes>"}`. */
   UNSUBSCRIBE_TOKEN_KEYS: z.string().min(2).max(8192),
   UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: z.coerce.number().int().min(1).max(999_999),
+  /** AI routing and pricing config files (ADR-0037); default: packages/core/config/*.yaml. */
+  AI_ROUTING_FILE: z.string().min(1).optional(),
+  AI_PRICING_FILE: z.string().min(1).optional(),
+  /** Global AI kill switch (AIC-PRE-03): every AI call fails fast before reaching a provider. */
+  AI_DISABLED: envBoolean.default(false),
+  /** Provider keys. Required in real mode for every provider the routing config names. */
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
 };
 
 export const baseServerEnvSchema = z.object(baseShape);

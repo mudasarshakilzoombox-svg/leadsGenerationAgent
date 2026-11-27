@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (auth pages, admin shell, real read-only data, ADR-0035) uses a project-scoped, Explee-style shell: project switcher, campaigns in the sidebar, Performance dashboard, Sent and Email sequences pages (ADR-0036). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). Next in Phase 0: the AI gateway, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (auth pages, admin shell, real read-only data, ADR-0035) uses a project-scoped, Explee-style shell: project switcher, campaigns in the sidebar, Performance dashboard, Sent and Email sequences pages (ADR-0036). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). The AI layer is in place in `packages/core/src/platform/ai/` (ADR-0037): `AiGateway` (Anthropic + OpenAI + fake adapters, routing and pricing config, structured output with one repair, fallback, circuit breaker), `AiActionPipeline` (AIC checks, credit hook, action gates) and `ai_runs` metering. Next in Phase 0: OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -64,6 +64,8 @@ pnpm test:integration        # core (tenancy, constraints, seed) + api + worker 
 pnpm smoke                   # end-to-end checks against running dev servers
 pnpm db:migrate              # create a migration (prisma migrate dev) in packages/core
 pnpm stack:build && pnpm stack:up && pnpm stack:smoke   # production-like Docker stack
+pnpm ai:eval <task> [--provider fake|anthropic|openai]   # golden-case eval (real providers only when you run it)
+pnpm ai:selftest             # enqueue one ai.selftest job for the running worker
 ```
 
 Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@lga/core`.

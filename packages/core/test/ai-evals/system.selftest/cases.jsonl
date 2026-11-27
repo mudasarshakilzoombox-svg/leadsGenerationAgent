@@ -1,0 +1,10 @@
+{"id":"selftest-01","context":{"code":"A1B2C3","a":0,"b":5}}
+{"id":"selftest-02","context":{"code":"ZZ9911","a":37,"b":916}}
+{"id":"selftest-03","context":{"code":"QWERTY12","a":74,"b":827}}
+{"id":"selftest-04","context":{"code":"HELLO7","a":111,"b":738}}
+{"id":"selftest-05","context":{"code":"000000","a":148,"b":649}}
+{"id":"selftest-06","context":{"code":"9X8Y7Z","a":185,"b":560}}
+{"id":"selftest-07","context":{"code":"MIXED42","a":222,"b":471}}
+{"id":"selftest-08","context":{"code":"LGA2026","a":259,"b":382}}
+{"id":"selftest-09","context":{"code":"TEST01","a":296,"b":293}}
+{"id":"selftest-10","context":{"code":"ABCDEFGH","a":333,"b":204}}

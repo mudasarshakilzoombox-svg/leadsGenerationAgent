@@ -2,6 +2,8 @@
 
 > Status: Draft for review · Related: [ADR-0010](adr/ADR-0010-bounded-ai-workflows.md), [05-ai-orchestration.md](05-ai-orchestration.md), threat TM-07 in [14-threat-model.md](14-threat-model.md)
 
+> **As implemented (2026-11-27, [ADR-0037](adr/ADR-0037-ai-gateway-implementation.md)):** `AiActionPipeline` applies PRE-03, PRE-05 (interactive calls), PRE-06, PRE-07, PRE-08 (centrally, to every untrusted block), PRE-09, PRE-10, PRE-11, OUT-01/02 and OUT-12, then the task's `ActionGate` (effects outside its declared set are dropped and recorded as `AIC-ACT` WARN). PRE-04 goes through a `CreditPort`: until the Phase 2 ledger exists, priced tasks are refused. Task-specific checks (PRE-01/02/12/13, OUT-03 to OUT-11, OUT-13 to OUT-16) ship with the tasks that need them. Checks live in `platform/ai/checks/` with unit tests.
+
 ## 1. Principle
 
 > **An LLM may propose. Only deterministic code may decide and act.**

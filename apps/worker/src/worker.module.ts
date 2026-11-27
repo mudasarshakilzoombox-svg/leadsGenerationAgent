@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import {
+  AiModule,
   AppConfigModule,
   DatabaseModule,
   LoggingModule,
@@ -10,6 +11,7 @@ import {
 } from '@lga/core';
 import { HealthServer } from './health/health-server.js';
 import { WorkerHealthService } from './health/worker-health.service.js';
+import { AiSelftestProcessor } from './processors/ai-selftest.processor.js';
 import { HeartbeatProcessor } from './processors/heartbeat.processor.js';
 import { WorkerRuntime } from './runtime/worker-runtime.js';
 
@@ -25,9 +27,11 @@ export class WorkerModule {
         RedisModule.forRoot(),
         QueueModule.forRoot(),
         PlatformServicesModule.forRoot(),
+        AiModule.forRoot(),
       ],
       providers: [
         HeartbeatProcessor,
+        AiSelftestProcessor,
         WorkerRuntime,
         WorkerHealthService,
         ...(options.healthServer === false ? [] : [HealthServer]),

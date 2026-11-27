@@ -124,6 +124,20 @@ enum UsageMetric {
   @@map("usage_metric")
 }
 
+/// Outcome of one AI call (DATABASE_DESIGN.md §5.8, 15-ai-security-controls §7).
+enum AiRunStatus {
+  SUCCESS
+  BATCHED
+  INVALID_OUTPUT
+  CHECK_BLOCKED
+  MODEL_REFUSED
+  PROVIDER_ERROR
+  TIMEOUT
+  BUDGET_BLOCKED
+
+  @@map("ai_run_status")
+}
+
 enum UsageStatus {
   RESERVED
   SETTLED
@@ -831,6 +845,7 @@ model Workspace {
   webhookEvents        WebhookEvent[]
   auditLogs            AuditLog[]
   backgroundJobs       BackgroundJob[]
+  aiRuns               AiRun[]
 
   @@unique([slug], map: "workspaces_slug_active_key", where: raw("deleted_at IS NULL"))
   @@index([status])
@@ -2133,4 +2148,40 @@ model BackgroundJob {
   @@index([workspaceId, type, createdAt(sort: Desc)])
   @@index([updatedAt], map: "background_jobs_open_idx", where: raw("status = 'QUEUED' OR status = 'RUNNING'"))
   @@map("background_jobs")
+}
+
+/// One row per AI call through AiGateway (ADR-0037, 15-ai-security-controls AIC-AUD-01). Owned by
+/// platform/ai. workspace_id is NULL for platform-level calls (self-tests). Payloads are redacted
+/// (untrusted text stored as hash + length) and purged after 30 days. agent_run_id gets its FK
+/// when agent_runs arrives (Phase 1).
+model AiRun {
+  id                 String      @id @default(uuid(7)) @db.Uuid
+  workspaceId        String?     @map("workspace_id") @db.Uuid
+  agentRunId         String?     @map("agent_run_id") @db.Uuid
+  taskKey            String      @map("task_key")
+  promptVersion      Int         @map("prompt_version")
+  provider           String
+  model              String
+  status             AiRunStatus
+  checkResults       Json        @default("[]") @map("check_results")
+  injectionSuspected Boolean     @default(false) @map("injection_suspected")
+  attempt            Int         @default(1)
+  inputTokens        Int         @default(0) @map("input_tokens")
+  cachedInputTokens  Int         @default(0) @map("cached_input_tokens")
+  outputTokens       Int         @default(0) @map("output_tokens")
+  costMicros         BigInt      @default(0) @map("cost_micros")
+  latencyMs          Int         @default(0) @map("latency_ms")
+  batchId            String?     @map("batch_id")
+  entityType         String?     @map("entity_type")
+  entityId           String?     @map("entity_id")
+  requestPayload     Json?       @map("request_payload")
+  responsePayload    Json?       @map("response_payload")
+  errorCode          String?     @map("error_code")
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([taskKey, createdAt])
+  @@map("ai_runs")
 }

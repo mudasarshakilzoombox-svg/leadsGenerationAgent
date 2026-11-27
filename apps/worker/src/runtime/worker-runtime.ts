@@ -19,12 +19,14 @@ import {
 } from '@lga/core';
 import { type Job, UnrecoverableError, Worker } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { AiSelftestProcessor } from '../processors/ai-selftest.processor.js';
 import { HeartbeatProcessor } from '../processors/heartbeat.processor.js';
 
 /** Base concurrency per queue (06-background-jobs §2), scaled by WORKER_CONCURRENCY_FACTOR. */
 const BASE_CONCURRENCY: Record<QueueName, number> = {
   [QUEUE_NAMES.system]: 1,
   [QUEUE_NAMES.notifications]: 2,
+  [QUEUE_NAMES.ai]: 2,
 };
 
 /**
@@ -41,6 +43,7 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
     private readonly queues: QueueRegistry,
     private readonly heartbeat: HeartbeatProcessor,
     private readonly notifications: NotificationDeliveryService,
+    private readonly aiSelftest: AiSelftestProcessor,
     @InjectPinoLogger(WorkerRuntime.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -48,6 +51,7 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
     this.connection = createRedis(this.env.VALKEY_URL, 'queue-worker');
     this.startWorker(QUEUE_NAMES.system, (job) => this.processSystem(job));
     this.startWorker(QUEUE_NAMES.notifications, (job) => this.processNotifications(job));
+    this.startWorker(QUEUE_NAMES.ai, (job) => this.processAi(job));
     await this.registerSchedules();
   }
 
@@ -107,6 +111,18 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
         throw new UnrecoverableError(
           `Unknown job "${job.name}" on queue ${QUEUE_NAMES.notifications}`,
         );
+    }
+  }
+
+  /** AI jobs: every call goes through AiActionPipeline (AGENTS.md rules 7 and 10). */
+  private async processAi(job: Job): Promise<void> {
+    const envelope = JobEnvelopeSchema.parse(job.data);
+    switch (job.name) {
+      case JOB_NAMES.aiSelftest:
+        await this.aiSelftest.handle(envelope);
+        return;
+      default:
+        throw new UnrecoverableError(`Unknown job "${job.name}" on queue ${QUEUE_NAMES.ai}`);
     }
   }
 

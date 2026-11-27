@@ -1,6 +1,6 @@
 # ADR-0010: Bounded AI workflows with deterministic checks and action gates
 
-- **Status:** Proposed · **Date:** 2026-11-26 · **Maps to:** AD-10
+- **Status:** Accepted · **Date:** 2026-11-26 · **Maps to:** AD-10 · **Implemented:** 2026-11-27, see [ADR-0037](ADR-0037-ai-gateway-implementation.md)
 
 ## Context
 The product processes untrusted content (websites, inbound email) with LLMs and produces outbound email under customers' names. Prompt injection (TM-07), hallucinated claims and runaway costs are inherent risks of autonomous agents.

@@ -12,8 +12,8 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0006](ADR-0006-shared-schema-multitenancy.md) | Shared-schema multi-tenancy (workspace_id, composite FKs, RLS later) | Proposed | AD-06, AD-16 |
 | [0007](ADR-0007-opaque-server-sessions.md) | Opaque server-side sessions instead of JWTs | Proposed | AD-07 |
 | [0008](ADR-0008-customer-mailboxes-only.md) | Outreach only via customer mailboxes. SMTP/IMAP + Microsoft first | Proposed | AD-08, AD-20 |
-| [0009](ADR-0009-provider-independent-ai-gateway.md) | Provider-independent AI gateway with task-tier routing | Proposed | AD-09 |
-| [0010](ADR-0010-bounded-ai-workflows.md) | Bounded AI workflows with deterministic checks and action gates | Proposed | AD-10 |
+| [0009](ADR-0009-provider-independent-ai-gateway.md) | Provider-independent AI gateway with task-tier routing | Accepted | AD-09 |
+| [0010](ADR-0010-bounded-ai-workflows.md) | Bounded AI workflows with deterministic checks and action gates | Accepted | AD-10 |
 | [0011](ADR-0011-byok-data-and-provenance.md) | BYOK prospect data with provenance recording | Proposed | AD-11 |
 | [0012](ADR-0012-single-vps-docker-compose.md) | Single-VPS Docker Compose deployment with on-demand staging | Proposed | AD-12, AD-21 |
 | [0013](ADR-0013-compliance-enforcement-points.md) | Compliance enforced at import, enrollment and send. Country policy | Proposed | AD-13, AD-22 |
@@ -34,9 +34,10 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0028](ADR-0028-polling-first-realtime.md) | Polling first for realtime UI, SSE later | Proposed | — |
 | [0029](ADR-0029-low-cost-supporting-services.md) | Low-cost supporting services | Proposed | AD-23 |
 | [0030](ADR-0030-csv-only-uploads.md) | CSV-only uploads, streamed to private storage | Proposed | — |
-| [0031](ADR-0031-prompt-registry-and-evals.md) | Prompts versioned in code with eval gates | Proposed | — |
+| [0031](ADR-0031-prompt-registry-and-evals.md) | Prompts versioned in code with eval gates | Accepted | — |
 | [0032](ADR-0032-repository-layout-apps-and-core.md) | Separate api and worker apps with a backend core package (amends 0001/0002 layout) | Accepted | — |
 | [0033](ADR-0033-schema-v1-entities.md) | Schema v1 entities, code-synced catalog tables, tenant-safe delete policies | Accepted | — |
 | [0034](ADR-0034-auth-implementation-and-read-only-role.md) | Authentication implementation choices and the READ_ONLY workspace role (amends 0016) | Accepted | — |
 | [0035](ADR-0035-dashboard-ui-and-read-models.md) | Dashboard UI, read-only data endpoints and the admin shell | Accepted | — |
 | [0036](ADR-0036-project-scoped-navigation.md) | Project-scoped navigation and dashboard (Explee-style) | Accepted | — |
+| [0037](ADR-0037-ai-gateway-implementation.md) | AI gateway implementation choices (P0.2) | Accepted | — |

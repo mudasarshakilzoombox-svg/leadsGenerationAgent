@@ -1,6 +1,6 @@
 # ADR-0031: Prompts versioned in code with eval gates
 
-- **Status:** Proposed · **Date:** 2026-11-26
+- **Status:** Accepted · **Date:** 2026-11-26 · **Implemented:** 2026-11-27, see [ADR-0037](ADR-0037-ai-gateway-implementation.md)
 
 ## Context
 Prompt and model changes alter product behavior as much as code changes do, but they fail silently (quality drops, more hallucinations, injection regressions). They need review, versioning and rollback.

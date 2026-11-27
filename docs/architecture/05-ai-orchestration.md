@@ -2,6 +2,8 @@
 
 > Status: Draft for review · Related: [ADR-0009](adr/ADR-0009-provider-independent-ai-gateway.md), [ADR-0010](adr/ADR-0010-bounded-ai-workflows.md), [ADR-0031](adr/ADR-0031-prompt-registry-and-evals.md), [15-ai-security-controls.md](15-ai-security-controls.md)
 
+> **As implemented (2026-11-27, [ADR-0037](adr/ADR-0037-ai-gateway-implementation.md)):** `packages/core/src/platform/ai/` holds the gateway, pipeline, adapters (Anthropic, OpenAI, fake), circuit breaker, `ai_runs` recorder and eval harness (`pnpm ai:eval`). Config lives in `packages/core/config/ai-routing.yaml` and `ai-pricing.yaml`. Only `system.selftest` is registered so far; feature tasks add their prompt, checks and golden set with their phase. **Change to §4:** current Claude models reject sampling parameters, so tasks carry `effort` for Anthropic and `temperature` for OpenAI. **Change to §7:** the Anthropic adapter can use Anthropic's server-side refusal fallback (`serverFallback` in the routing config); remaining refusals are still `MODEL_REFUSED`. `AgentRunner`, `BatchCoordinator` and the cost cap arrive in Phase 1, Phase 3 and Phase 5 respectively.
+
 ## 1. Principles (recap)
 
 AI runs **inside fixed workflows**. Models never get tools with side effects. Every AI action is wrapped by `AiActionPipeline`, which applies the deterministic checks in doc 15, and every side effect is applied by deterministic code after the checks pass.

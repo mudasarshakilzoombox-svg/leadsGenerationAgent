@@ -32,6 +32,7 @@ export const MODEL_SCOPES = {
   CreditGrant: 'tenant',
   UsageLedger: 'tenant',
   PaymentEvent: 'tenant-optional',
+  AiRun: 'tenant-optional',
   BusinessProfile: 'tenant',
   Offering: 'tenant',
   WebsiteAnalysis: 'tenant',

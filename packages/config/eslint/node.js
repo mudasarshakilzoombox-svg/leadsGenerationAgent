@@ -23,6 +23,16 @@ export function node(tsconfigRootDir) {
             },
             { name: 'got', message: 'Use SafeFetch or the provider HTTP client (ADR-0022).' },
             { name: 'undici', message: 'Use SafeFetch or the provider HTTP client (ADR-0022).' },
+            {
+              name: '@anthropic-ai/sdk',
+              message:
+                'LLM SDKs are imported only by the AiGateway provider adapters (AGENTS.md rule 7).',
+            },
+            {
+              name: 'openai',
+              message:
+                'LLM SDKs are imported only by the AiGateway provider adapters (AGENTS.md rule 7).',
+            },
           ],
         },
       ],
