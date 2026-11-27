@@ -12,12 +12,19 @@ const example = path.join(root, '.env.example');
 
 // 32 random bytes, URL-safe: long enough for passwords and for the auth peppers (>= 32 chars).
 const secret = () => randomBytes(32).toString('base64url');
+// `change-me-local-keyring*`: a one-key JSON key ring (ADR-0021/0024), e.g. {"1":"<base64>"}.
+const keyring = () => JSON.stringify({ 1: randomBytes(32).toString('base64') });
 
 /** Replace `change-me-local-*` placeholders with random values (same placeholder, same value). */
 function fillPlaceholders(text) {
   const replacements = new Map();
   const filled = text.replace(/change-me-local-[a-z]+/g, (placeholder) => {
-    if (!replacements.has(placeholder)) replacements.set(placeholder, secret());
+    if (!replacements.has(placeholder)) {
+      replacements.set(
+        placeholder,
+        placeholder.startsWith('change-me-local-keyring') ? keyring() : secret(),
+      );
+    }
     return replacements.get(placeholder);
   });
   return { filled, count: replacements.size };

@@ -8,6 +8,7 @@ export interface BreachedPasswordChecker {
 }
 export const BREACHED_PASSWORD_CHECKER = Symbol.for('lga.BreachedPasswordChecker');
 
+// Fixed provider host, not a user-influenced URL. Moves to the provider HTTP client in Phase 2.
 type Fetch = typeof fetch;
 
 /**
@@ -18,6 +19,7 @@ export class HibpBreachedPasswordChecker implements BreachedPasswordChecker {
   private readonly logger = new Logger('HibpBreachedPasswordChecker');
 
   constructor(
+    // eslint-disable-next-line no-restricted-globals -- fixed-host provider call (ADR-0022)
     private readonly fetchImpl: Fetch = fetch,
     private readonly timeoutMs = 2_000,
   ) {}

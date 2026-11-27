@@ -1,6 +1,6 @@
 # ADR-0024: Stateless HMAC unsubscribe tokens with RFC 8058
 
-- **Status:** Proposed · **Date:** 2026-11-26 · PRD SND-05
+- **Status:** Accepted · **Date:** 2026-11-26 · PRD SND-05 · **Implemented:** 2026-11-27 in `packages/core/src/security/signed-token.ts` (purpose is part of the MAC input; signing key chosen by `UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID`)
 
 ## Context
 Unsubscribe must work with one click from mail clients (RFC 8058 `List-Unsubscribe-Post`), without login or JavaScript, indefinitely (CAN-SPAM requires at least 30 days), and resist forgery so attackers can't unsubscribe arbitrary people (TM-11).

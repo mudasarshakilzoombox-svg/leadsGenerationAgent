@@ -1,6 +1,6 @@
 # ADR-0021: Application-level field encryption with versioned keys
 
-- **Status:** Proposed · **Date:** 2026-11-26
+- **Status:** Accepted · **Date:** 2026-11-26 · **Implemented:** 2026-11-27 in `packages/core/src/security/field-crypto.ts` (AAD also binds the column name, see SECURITY.md §5.3)
 
 ## Context
 OAuth refresh tokens, SMTP passwords, BYOK API keys, TOTP secrets and DSAR requester emails are high-value secrets (TM-12). The VPS disk isn't assumed to be encrypted, and backups or dumps could leak. A cloud KMS adds cost and dependency.

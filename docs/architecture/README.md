@@ -58,8 +58,9 @@
 | `TenantPrisma` / `SystemPrisma` | DB clients | `common/db` | Tenant-enforcing Prisma extension / explicit system access |
 | `TxManager` | Service | `common/db` | Transactions plus `afterCommit()` hooks for jobs and events |
 | `JobProducer` | Service | `common/jobs` | Typed, after-commit enqueueing with deterministic job IDs |
-| `SafeFetch` | Utility | `common/safe-fetch` | SSRF-safe HTTP egress |
-| `FieldCrypto` | Utility | `common/crypto` | AES-256-GCM field encryption with key versions |
+| `SafeFetch` | Utility | `packages/core/src/security/safe-fetch.ts` (+ `address-policy.ts`) | SSRF-safe HTTP egress |
+| `FieldCrypto` | Utility | `packages/core/src/security/field-crypto.ts` | AES-256-GCM field encryption with key versions |
+| `SignedTokens` / `UnsubscribeTokens` | Utility | `packages/core/src/security/signed-token.ts` | Stateless HMAC tokens with key rotation (ADR-0024) |
 | `AiGateway` | Service | `platform/ai` | The only path to LLM providers |
 | `AiActionPipeline` | Service | `platform/ai` | Wraps every AI action with the AIC-* checks (doc 15) |
 | `CreditService` / `EntitlementService` | Services | `platform/billing` | Reserve/settle/release credits. Effective plan limits |

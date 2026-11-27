@@ -24,10 +24,10 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0018](ADR-0018-credit-ledger.md) | Credit ledger: grants, reservations, millicredits | Proposed | AD-19 |
 | [0019](ADR-0019-hosted-checkout-payment-port.md) | Hosted checkout behind a `PaymentProvider` port | Proposed | AD-19 |
 | [0020](ADR-0020-uuidv7-keys.md) | UUIDv7 primary keys | Proposed | — |
-| [0021](ADR-0021-field-level-encryption.md) | Application-level field encryption with versioned keys | Proposed | — |
-| [0022](ADR-0022-safefetch-egress-control.md) | SafeFetch as the only egress path for user-influenced URLs | Proposed | — |
+| [0021](ADR-0021-field-level-encryption.md) | Application-level field encryption with versioned keys | Accepted | — |
+| [0022](ADR-0022-safefetch-egress-control.md) | SafeFetch as the only egress path for user-influenced URLs | Accepted | — |
 | [0023](ADR-0023-exactly-once-sending.md) | Exactly-once sending via deterministic Message-ID and DB constraints | Proposed | — |
-| [0024](ADR-0024-hmac-unsubscribe-tokens.md) | Stateless HMAC unsubscribe tokens with RFC 8058 | Proposed | — |
+| [0024](ADR-0024-hmac-unsubscribe-tokens.md) | Stateless HMAC unsubscribe tokens with RFC 8058 | Accepted | — |
 | [0025](ADR-0025-postgres-analytics-rollups.md) | Analytics from an event table and rollups in PostgreSQL | Proposed | — |
 | [0026](ADR-0026-hosted-observability.md) | Hosted free-tier observability with low-cardinality metrics | Proposed | AD-23 |
 | [0027](ADR-0027-backups-pitr.md) | Immutable encrypted backups. PITR in V1 | Proposed | — |

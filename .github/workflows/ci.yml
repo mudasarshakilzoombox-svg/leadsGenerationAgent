@@ -52,6 +52,11 @@ jobs:
       VALKEY_URL: redis://localhost:6379/0
       SESSION_PEPPER: ci-only-session-pepper-not-a-secret-0001
       EMAIL_HASH_PEPPER: ci-only-email-pepper-not-a-secret-00001
+      # CI-only key rings (all-zero / all-one bytes); never used outside tests.
+      APP_ENCRYPTION_KEYS: '{"1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+      APP_ENCRYPTION_ACTIVE_VERSION: '1'
+      UNSUBSCRIBE_TOKEN_KEYS: '{"1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}'
+      UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: '1'
 
     steps:
       - uses: actions/checkout@v4

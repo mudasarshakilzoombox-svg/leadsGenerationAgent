@@ -1,5 +1,6 @@
 import { envBoolean, envPort, parseEnv } from '@lga/shared';
 import { z } from 'zod';
+import { parseActiveKeyring } from '../security/keyring.js';
 
 export const APP_ENVS = ['local', 'test', 'staging', 'production'] as const;
 export type AppEnv = (typeof APP_ENVS)[number];
@@ -24,15 +25,44 @@ const baseShape = {
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
   VALKEY_URL: valkeyUrl,
   INTEGRATIONS_MODE: z.enum(['real', 'fake']).default('fake'),
+  /** AES-256-GCM key ring for credential fields (ADR-0021): JSON `{"1":"<base64 32 bytes>"}`. */
+  APP_ENCRYPTION_KEYS: z.string().min(2).max(8192),
+  APP_ENCRYPTION_ACTIVE_VERSION: z.coerce.number().int().min(1).max(999_999),
+  /** HMAC key ring for unsubscribe links (ADR-0024): JSON `{"1":"<base64 >= 32 bytes>"}`. */
+  UNSUBSCRIBE_TOKEN_KEYS: z.string().min(2).max(8192),
+  UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: z.coerce.number().int().min(1).max(999_999),
 };
 
 export const baseServerEnvSchema = z.object(baseShape);
 export type BaseServerEnv = z.output<typeof baseServerEnvSchema>;
 
-function refineServerEnv(
-  env: Pick<BaseServerEnv, 'APP_ENV' | 'INTEGRATIONS_MODE' | 'APP_ORIGIN' | 'LOG_PRETTY'>,
-  ctx: z.RefinementCtx,
-): void {
+/** Key rings must parse, hold valid keys and contain the active id. Messages never echo keys. */
+function refineKeyrings(env: BaseServerEnv, ctx: z.RefinementCtx): void {
+  const rings = [
+    [
+      'APP_ENCRYPTION_KEYS',
+      env.APP_ENCRYPTION_KEYS,
+      env.APP_ENCRYPTION_ACTIVE_VERSION,
+      { exactBytes: 32 },
+    ],
+    [
+      'UNSUBSCRIBE_TOKEN_KEYS',
+      env.UNSUBSCRIBE_TOKEN_KEYS,
+      env.UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID,
+      { minBytes: 32 },
+    ],
+  ] as const;
+  for (const [name, json, activeId, rules] of rings) {
+    try {
+      parseActiveKeyring(json, activeId, rules);
+    } catch (error) {
+      ctx.addIssue({ code: 'custom', path: [name], message: (error as Error).message });
+    }
+  }
+}
+
+function refineServerEnv(env: BaseServerEnv, ctx: z.RefinementCtx): void {
+  refineKeyrings(env, ctx);
   if (env.APP_ENV !== 'production') return;
   if (env.INTEGRATIONS_MODE === 'fake') {
     ctx.addIssue({

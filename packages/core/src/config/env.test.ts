@@ -6,6 +6,10 @@ const base = {
   APP_ORIGIN: 'http://localhost:3300',
   DATABASE_URL: 'postgresql://lga_app:pw@localhost:5432/lga',
   VALKEY_URL: 'redis://:pw@localhost:6379/0',
+  APP_ENCRYPTION_KEYS: '{"1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}',
+  UNSUBSCRIBE_TOKEN_KEYS: '{"1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}',
+  APP_ENCRYPTION_ACTIVE_VERSION: '1',
+  UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: '1',
 };
 const apiBase = {
   ...base,
@@ -49,6 +53,32 @@ describe('backend env', () => {
     const short = messageOf(() => loadApiEnv({ ...apiBase, SESSION_PEPPER: 'too-short' }));
     expect(short).toContain('SESSION_PEPPER');
     expect(short).not.toContain('too-short');
+  });
+
+  it('requires valid encryption and unsubscribe key rings for api and worker', () => {
+    const { APP_ENCRYPTION_KEYS: _enc, UNSUBSCRIBE_TOKEN_KEYS: _unsub, ...withoutKeys } = base;
+    const missing = messageOf(() => loadWorkerEnv(withoutKeys));
+    expect(missing).toContain('APP_ENCRYPTION_KEYS');
+    expect(missing).toContain('UNSUBSCRIBE_TOKEN_KEYS');
+
+    const secretKey = Buffer.alloc(16, 7).toString('base64');
+    const cases: Array<[Record<string, string>, string, string]> = [
+      [{ APP_ENCRYPTION_KEYS: 'not json' }, 'APP_ENCRYPTION_KEYS', 'JSON object'],
+      [{ APP_ENCRYPTION_KEYS: '[]' }, 'APP_ENCRYPTION_KEYS', 'JSON object'],
+      [{ APP_ENCRYPTION_KEYS: '{}' }, 'APP_ENCRYPTION_KEYS', 'at least one key'],
+      [{ APP_ENCRYPTION_KEYS: `{"1":"${secretKey}"}` }, 'APP_ENCRYPTION_KEYS', '32 bytes'],
+      [{ APP_ENCRYPTION_KEYS: '{"x":"AAAA"}' }, 'APP_ENCRYPTION_KEYS', 'positive integer'],
+      [{ APP_ENCRYPTION_ACTIVE_VERSION: '2' }, 'APP_ENCRYPTION_KEYS', 'active key 2'],
+      [{ UNSUBSCRIBE_TOKEN_KEYS: `{"1":"${secretKey}"}` }, 'UNSUBSCRIBE_TOKEN_KEYS', '32 bytes'],
+      [{ UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: '9' }, 'UNSUBSCRIBE_TOKEN_KEYS', 'active key 9'],
+    ];
+    for (const [override, name, reason] of cases) {
+      const message = messageOf(() => loadApiEnv({ ...apiBase, ...override }));
+      expect(message).toContain(name);
+      expect(message).toContain(reason);
+      // Errors name the variable but never echo key material.
+      expect(message).not.toContain(secretKey);
+    }
   });
 
   it('enforces production safety rules', () => {

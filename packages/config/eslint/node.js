@@ -22,7 +22,16 @@ export function node(tsconfigRootDir) {
               message: 'Use SafeFetch or the provider HTTP client (ADR-0022).',
             },
             { name: 'got', message: 'Use SafeFetch or the provider HTTP client (ADR-0022).' },
+            { name: 'undici', message: 'Use SafeFetch or the provider HTTP client (ADR-0022).' },
           ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message:
+            'Use SafeFetch for user-influenced URLs or the provider HTTP client for fixed provider hosts (ADR-0022).',
         },
       ],
     },

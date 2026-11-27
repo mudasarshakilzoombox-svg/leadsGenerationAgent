@@ -6,6 +6,7 @@ export interface HumanVerifier {
 }
 export const HUMAN_VERIFIER = Symbol.for('lga.HumanVerifier');
 
+// Fixed provider host, not a user-influenced URL. Moves to the provider HTTP client in Phase 2.
 type Fetch = typeof fetch;
 
 /** Server-side Turnstile siteverify. Fails closed: an unverifiable token is rejected. */
@@ -14,6 +15,7 @@ export class TurnstileHumanVerifier implements HumanVerifier {
 
   constructor(
     private readonly secret: string,
+    // eslint-disable-next-line no-restricted-globals -- fixed-host provider call (ADR-0022)
     private readonly fetchImpl: Fetch = fetch,
     private readonly timeoutMs = 5_000,
   ) {}

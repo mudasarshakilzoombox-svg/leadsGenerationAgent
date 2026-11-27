@@ -1,6 +1,6 @@
 # ADR-0022: SafeFetch as the only egress path for user-influenced URLs
 
-- **Status:** Proposed · **Date:** 2026-11-26
+- **Status:** Accepted · **Date:** 2026-11-26 · **Implemented:** 2026-11-27 in `packages/core/src/security/{address-policy,safe-fetch}.ts` (robots.txt is evaluated by the crawler, see SECURITY.md §7.2)
 
 ## Context
 The product fetches URLs supplied directly or indirectly by users: business websites, company domains from data, research results, and SMTP/IMAP hosts. SSRF (TM-06) could reach Docker services (`postgres`, `valkey`, `api`), localhost or metadata endpoints.

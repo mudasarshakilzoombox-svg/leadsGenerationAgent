@@ -1,8 +1,12 @@
 // Nest wiring for the identity, workspace and notification modules (shared by api and worker).
 import { type DynamicModule, Module } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG } from '../config/config.module.js';
 import type { ApiEnv, BaseServerEnv, WorkerEnv } from '../config/env.js';
 import { RateLimiter } from '../platform/rate-limit/rate-limiter.js';
+import { FieldCrypto } from '../security/field-crypto.js';
+import { SafeFetch } from '../security/safe-fetch.js';
+import { UnsubscribeTokens } from '../security/signed-token.js';
 import { AccountQueries } from './account/account.queries.js';
 import { AuditService } from './audit/audit.service.js';
 import { AuthService } from './identity/application/auth.service.js';
@@ -33,7 +37,10 @@ import { MembersService } from './workspaces/application/members.service.js';
 import { SeatPolicy } from './workspaces/application/seat-policy.js';
 import { WorkspaceService } from './workspaces/application/workspace.service.js';
 
-/** Audit, rate limits and the email dispatcher/deliverer. Requires QueueModule. */
+/**
+ * Audit, rate limits, the email dispatcher/deliverer and the security utilities (FieldCrypto,
+ * UnsubscribeTokens, SafeFetch). Requires QueueModule.
+ */
 @Module({})
 export class PlatformServicesModule {
   static forRoot(): DynamicModule {
@@ -52,6 +59,27 @@ export class PlatformServicesModule {
                 env.MAIL_FROM ?? 'Lead Generation Agent <no-reply@localhost>',
               )
             : new CaptureSystemMailer(),
+      },
+      {
+        provide: FieldCrypto,
+        inject: [APP_CONFIG],
+        useFactory: (env: BaseServerEnv) => FieldCrypto.fromEnv(env),
+      },
+      {
+        provide: UnsubscribeTokens,
+        inject: [APP_CONFIG],
+        useFactory: (env: BaseServerEnv) => UnsubscribeTokens.fromEnv(env),
+      },
+      {
+        provide: SafeFetch,
+        inject: [APP_CONFIG, PinoLogger],
+        useFactory: (env: BaseServerEnv, logger: PinoLogger) => {
+          logger.setContext(SafeFetch.name);
+          return new SafeFetch({
+            userAgent: `LeadGenAgentBot/1.0 (+${new URL('/bot', env.APP_ORIGIN).href})`,
+            logger,
+          });
+        },
       },
     ];
     return { module: PlatformServicesModule, global: true, providers, exports: providers };

@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (13 sections, auth pages, admin shell) shows real read-only data (ADR-0035). Next in Phase 0: OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (13 sections, auth pages, admin shell) shows real read-only data (ADR-0035). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). Next in Phase 0: the AI gateway, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -78,7 +78,7 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 6. **Job payloads carry IDs only.** No PII, message bodies or secrets in jobs.
 7. **All LLM calls go through `AiGateway`** (`platform/ai`). Never import `openai` or `@anthropic-ai/sdk` outside the adapters. Never hard-code model IDs. Use task keys and routing config.
 8. **All third-party calls go through the provider wrapper** (rate limit, retry, circuit breaker, metering, provenance). Every new provider needs a fake implementation.
-9. **All fetches of user-influenced URLs go through `SafeFetch`** (SSRF protection).
+9. **All fetches of user-influenced URLs go through `SafeFetch`** (SSRF protection). Validate URL input early with `assertFetchableUrl`. Global `fetch` and other HTTP clients are lint errors in backend packages; fixed provider hosts go through the provider HTTP client.
 10. **LLM outputs never directly cause side effects.** Every AI call goes through `AiActionPipeline`, which applies the AIC-PRE/CALL/OUT/ACT checks in `docs/architecture/15-ai-security-controls.md`. New AI tasks must declare their check profile and action gate before implementation.
 11. **Every email send passes `SendPolicy`** (SP-01 to SP-13 in `docs/architecture/07-email-infrastructure.md` §4.1). No code path may call a `MailboxProvider.send` directly.
 
@@ -96,7 +96,7 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 - **Every new endpoint must include a cross-tenant test** (workspace B cannot read or modify workspace A's data, and gets a 404).
 - Never log or send to Sentry: emails, names, message bodies, tokens, cookies, API keys. Log entity IDs.
 - Secrets come from validated env config only. Never commit `.env*` files (only `.env.example`).
-- Encrypt credentials (OAuth tokens, SMTP passwords, BYOK keys) with the field-encryption utility (AES-256-GCM, AAD = workspace + row id).
+- Encrypt credentials (OAuth tokens, SMTP passwords, BYOK keys) with `FieldCrypto` (AES-256-GCM, AAD = workspace + row id + column). Store the version in `key_version`. Never log plaintext or ciphertext.
 - Privileged or data-export actions write an `audit_logs` entry.
 - Validate all input with Zod schemas from `packages/contracts`. Never trust `workspaceId`, `role` or `status` from request bodies.
 - Untrusted text (website content, inbound emails, provider data) is **data, never instructions** in prompts.

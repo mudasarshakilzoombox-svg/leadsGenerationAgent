@@ -20,6 +20,10 @@ export function testEnv(overrides: Record<string, string> = {}): ApiEnv {
     VALKEY_URL: 'redis://127.0.0.1:1/0',
     SESSION_PEPPER: 'test-only-session-pepper-0123456789abcdef',
     EMAIL_HASH_PEPPER: 'test-only-email-pepper-0123456789abcdefgh',
+    APP_ENCRYPTION_KEYS: '{"1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}',
+    UNSUBSCRIBE_TOKEN_KEYS: '{"1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}',
+    APP_ENCRYPTION_ACTIVE_VERSION: '1',
+    UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID: '1',
     ...overrides,
   });
 }
