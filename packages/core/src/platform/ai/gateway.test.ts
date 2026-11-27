@@ -201,6 +201,7 @@ describe('provider request mapping', () => {
     temperature: 0,
     timeoutMs: 1000,
     serverFallback: false,
+    reasoning: false,
   };
 
   it('Anthropic: structured output + effort, cache breakpoints, no tools, no sampling params', () => {
@@ -222,14 +223,26 @@ describe('provider request mapping', () => {
     expect(params).not.toHaveProperty('temperature');
   });
 
-  it('OpenAI: strict JSON schema response format, temperature, no tools', () => {
-    const params = OpenAiProvider.buildParams({ ...request, model: 'gpt-x', temperature: 0.4 });
+  it('OpenAI reasoning model: strict JSON schema, reasoning_effort, no temperature, no tools', () => {
+    const params = OpenAiProvider.buildParams({ ...request, model: 'gpt-6-luna', reasoning: true });
     expect(params.response_format).toMatchObject({
       type: 'json_schema',
       json_schema: { name: 'system_selftest', strict: true },
     });
-    expect(params.temperature).toBe(0.4);
+    expect(params).toMatchObject({ reasoning_effort: 'low', max_completion_tokens: 200 });
+    expect(params).not.toHaveProperty('temperature');
     expect(params.messages.map((m) => m.role)).toEqual(['system', 'user']);
     expect(params).not.toHaveProperty('tools');
+  });
+
+  it('OpenAI non-reasoning model: task temperature instead of reasoning_effort', () => {
+    const params = OpenAiProvider.buildParams({
+      ...request,
+      model: 'gpt-x',
+      reasoning: false,
+      temperature: 0.4,
+    });
+    expect(params).toMatchObject({ temperature: 0.4 });
+    expect(params).not.toHaveProperty('reasoning_effort');
   });
 });

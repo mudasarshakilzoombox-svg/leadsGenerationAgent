@@ -11,7 +11,8 @@ import {
 
 /**
  * OpenAI Chat Completions adapter, the fallback provider (ADR-0009, ADR-0037). Strict JSON-schema
- * response format, no tools, temperature from the task spec. SDK retries are off: the gateway owns
+ * response format, no tools. Reasoning models (the default) get `reasoning_effort` from the task
+ * spec and no sampling params; non-reasoning models get the task temperature. SDK retries are off: the gateway owns
  * retries and fallback. Prompt caching is automatic on OpenAI (stable prefix first).
  */
 export class OpenAiProvider implements LlmProvider {
@@ -26,7 +27,9 @@ export class OpenAiProvider implements LlmProvider {
     return {
       model: request.model,
       max_completion_tokens: request.maxOutputTokens,
-      temperature: request.temperature,
+      ...(request.reasoning
+        ? { reasoning_effort: request.effort }
+        : { temperature: request.temperature }),
       messages: [
         { role: 'system' as const, content: request.system },
         { role: 'user' as const, content: request.blocks.map((b) => b.text).join('\n\n') },

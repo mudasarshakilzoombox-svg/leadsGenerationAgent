@@ -19,6 +19,11 @@ const routeSchema = z.strictObject({
   rpm: z.number().int().min(1).max(100_000).default(60),
   /** Anthropic server-side refusal fallback (beta). */
   serverFallback: z.boolean().default(false),
+  /**
+   * Reasoning model (OpenAI GPT-5/6 families): send `reasoning_effort`, never `temperature`, which
+   * reasoning models reject. Set false for a non-reasoning model to send the task temperature.
+   */
+  reasoning: z.boolean().default(true),
 });
 export type AiRoute = z.output<typeof routeSchema>;
 

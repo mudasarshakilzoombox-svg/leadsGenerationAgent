@@ -18,11 +18,12 @@ The design is in 05-ai-orchestration and 15-ai-security-controls. Two facts abou
 - **Task spec:** `effort` for Anthropic and `temperature` for OpenAI. Each adapter sends only what its provider accepts. This replaces the temperature column of 05 §4 for Claude.
 - **Routing:**
   - Tiers map to ordered `{provider, model, rpm, serverFallback}` lists.
-  - Initial values, to be revised after the Gate 1 provider eval:
-    - fast = `claude-haiku-5-5`;
-    - standard = `claude-sonnet-5-5`;
-    - advanced = `claude-opus-5-5`.
-  - OpenAI fallback slots stay empty until a model is chosen.
+  - **Primary provider: OpenAI** (owner decision, 2026-11-27: the owner has an OpenAI account). Initial tiers, to be tuned with `pnpm ai:eval`:
+    - fast = `gpt-6-luna`;
+    - standard = `gpt-6.2-sol`;
+    - advanced = `gpt-6.2-sol` (`gpt-6.2-astra` only if an eval shows the quality gain is worth 4x the cost).
+  - The Anthropic adapter stays in the code, unrouted, as an optional fallback (a config change).
+  - Routes carry `reasoning` (default true): reasoning models get `reasoning_effort` and no `temperature`, which they reject.
   - Only routed models run (AIC-CALL-04).
   - Every routed model must have a price, so no call is unmetered; this is checked at boot.
 - **Anthropic adapter:**

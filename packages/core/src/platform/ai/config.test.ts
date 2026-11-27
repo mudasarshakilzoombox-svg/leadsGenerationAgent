@@ -27,8 +27,9 @@ describe('AI config', () => {
   it('loads and cross-checks the bundled routing and pricing files', () => {
     const config = loadAiConfig({});
     expect(config.routing.tiers.fast[0]).toMatchObject({
-      provider: 'anthropic',
-      model: 'claude-haiku-5-5',
+      provider: 'openai',
+      model: 'gpt-6-luna',
+      reasoning: true,
     });
     // Every routed model is priced (no unmetered calls).
     for (const model of allowedModels(config.routing))

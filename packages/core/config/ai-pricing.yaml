@@ -1,9 +1,17 @@
-# Internal AI cost per million tokens in USD (05-ai-orchestration §10). Reviewed monthly against the
-# providers' own reports. This is our cost, not the customer price (credits, PRD §8.4).
-# cost_micros = round(((input - cached) * input + cached * cachedInput + output * output) / 1e6 * 1e6)
+# Internal AI cost per million tokens in USD (05-ai-orchestration §10). Our cost, not the customer
+# price (credits, PRD §8.4). Standard tier, short context. Source: OpenAI and Anthropic pricing
+# pages, checked 2026-11-27. Review monthly against the providers' own usage reports.
+# cost_micros = (input - cached) * input + cached * cachedInput + output * output  (tokens * $/1M)
 version: 1
 
 models:
+  # OpenAI (routed)
+  gpt-6-luna: { input: 0.10, cachedInput: 0.01, output: 0.50 }
+  gpt-6.2-sol: { input: 2.00, cachedInput: 0.10, output: 10.00 }
+  gpt-6.2-astra: { input: 8.00, cachedInput: 0.40, output: 40.00 }
+  gpt-5.4-mini: { input: 0.75, cachedInput: 0.075, output: 4.50 }
+  gpt-5.4-nano: { input: 0.20, cachedInput: 0.02, output: 1.25 }
+  # Anthropic (adapter available, not routed)
   claude-haiku-5-5: { input: 0.10, cachedInput: 0.01, output: 0.50 }
   claude-sonnet-5-5: { input: 2.00, cachedInput: 0.10, output: 10.00 }
   claude-opus-5-5: { input: 4.00, cachedInput: 0.20, output: 20.00 }

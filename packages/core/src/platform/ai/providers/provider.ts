@@ -21,6 +21,8 @@ export interface LlmRequest {
   timeoutMs: number;
   /** Anthropic server-side refusal fallback (routing config). */
   serverFallback: boolean;
+  /** Reasoning model: effort instead of sampling params (routing config). */
+  reasoning: boolean;
   signal?: AbortSignal;
 }
 

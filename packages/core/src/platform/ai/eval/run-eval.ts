@@ -85,6 +85,11 @@ export async function runEval(options: {
     model: options.model,
     rpm: 1_000,
     serverFallback: false,
+    // Same sampling/effort behaviour as the routed entry for this model (default: reasoning model).
+    reasoning:
+      options.config.routing.tiers[tier].find(
+        (r) => r.provider === options.provider.name && r.model === options.model,
+      )?.reasoning ?? true,
   };
   // Pin the task's tier to the one provider/model under test (no fallback during evals).
   const config: AiConfig = {

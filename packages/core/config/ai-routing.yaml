@@ -2,20 +2,27 @@
 # Change a tier or a prompt version here and redeploy: no code change (rollback = config change).
 #
 # Each tier lists providers in fallback order. Only allowlisted models run (AIC-CALL-04): any model
-# a task resolves to must appear here. The OpenAI fallback is left out until the Gate 1 provider
-# eval picks a model; add e.g. `- { provider: openai, model: <id> }` under a tier to enable it.
+# a task resolves to must appear here, and every model needs a price in ai-pricing.yaml.
 #
-# serverFallback: enable Anthropic's server-side refusal fallback for that model (beta). Not
-# available on Haiku models.
+# Provider: OpenAI (owner decision 2026-11-27). The Anthropic adapter stays available: to add it
+# as a fallback, list e.g. `- { provider: anthropic, model: claude-sonnet-5-5 }` after the OpenAI
+# entry of a tier and set ANTHROPIC_API_KEY.
+#
+# reasoning: true (default) = reasoning model: the adapter sends reasoning_effort and no
+#   temperature. Set false for a non-reasoning model.
+# rpm: requests per minute for this model, shared across processes (keep under the account limit).
 version: 1
 
 tiers:
+  # Classification, research extraction, self-test: cheapest model.
   fast:
-    - { provider: anthropic, model: claude-haiku-5-5, rpm: 200 }
+    - { provider: openai, model: gpt-6-luna, rpm: 200 }
+  # Website extraction, drafts, suggested replies.
   standard:
-    - { provider: anthropic, model: claude-sonnet-5-5, rpm: 100, serverFallback: true }
+    - { provider: openai, model: gpt-6.2-sol, rpm: 100 }
+  # ICP generation. Raise to gpt-6.2-astra only if the eval shows a quality gain worth 4x the cost.
   advanced:
-    - { provider: anthropic, model: claude-opus-5-5, rpm: 50, serverFallback: true }
+    - { provider: openai, model: gpt-6.2-sol, rpm: 50 }
 
 # Per-task overrides. A task not listed uses its catalog defaults (tasks.ts) and prompt version 1.
 tasks:

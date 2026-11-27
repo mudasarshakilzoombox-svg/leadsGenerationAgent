@@ -145,6 +145,7 @@ export class AiGateway {
         maxOutputTokens: request.spec.maxOutputTokens,
         timeoutMs: request.spec.timeoutMs,
         serverFallback: route.serverFallback,
+        reasoning: route.reasoning,
         ...(request.signal ? { signal: request.signal } : {}),
       };
 
