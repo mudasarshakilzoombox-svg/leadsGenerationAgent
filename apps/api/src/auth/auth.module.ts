@@ -8,6 +8,8 @@ import {
   WorkspacesController,
 } from '../workspaces/workspaces.controller.js';
 import { AuthController } from './auth.controller.js';
+import { OAuthController } from './oauth.controller.js';
+import { ProfileController } from './profile.controller.js';
 import { SessionGuard } from './session.guard.js';
 import { TenantGuard } from './tenant.guard.js';
 
@@ -15,6 +17,8 @@ import { TenantGuard } from './tenant.guard.js';
 @Module({
   controllers: [
     AuthController,
+    OAuthController,
+    ProfileController,
     WorkspacesController,
     MembersController,
     InvitationsController,

@@ -5,7 +5,8 @@ import { createJobEnvelope } from '../../queue/jobs.js';
 import { QueueRegistry } from '../../queue/queue.module.js';
 
 export interface NotifyTarget {
-  type: 'user' | 'invitation';
+  /** `verification_token`: email change, revert and identity-link rows (worker mints the token). */
+  type: 'user' | 'invitation' | 'verification_token';
   id: string;
 }
 

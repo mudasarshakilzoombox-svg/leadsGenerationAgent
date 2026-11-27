@@ -7,6 +7,10 @@ export interface TemplateData {
   workspaceName?: string;
   inviterName?: string | null;
   roleLabel?: string;
+  /** Masked address (e.g. `o•••@acme.test`) for change notices. Never the full address. */
+  maskedEmail?: string;
+  /** Display name of a sign-in provider ("Google", "Microsoft"). */
+  providerLabel?: string;
 }
 
 export interface RenderedEmail {
@@ -92,6 +96,38 @@ function content(template: EmailTemplate, d: TemplateData): Content {
           'Resetting your password unlocks the account right away.',
         ],
         action: { label: 'Reset password', link: d.link! },
+      };
+    case 'auth.email_change_verify':
+      return {
+        subject: `Confirm your new email for ${APP_NAME}`,
+        paragraphs: [
+          hello,
+          `Confirm this address to use it for your ${APP_NAME} account. Until you do, your current address stays active.`,
+        ],
+        action: { label: 'Confirm new email', link: d.link! },
+        footer: 'This link expires in 24 hours. If you did not ask for this, ignore this email.',
+      };
+    case 'auth.email_changed':
+      return {
+        subject: `Your ${APP_NAME} email address was changed`,
+        paragraphs: [
+          hello,
+          `The email address on your account was changed to ${d.maskedEmail ?? 'a new address'}.`,
+          'If you did not do this, undo the change: every device will be signed out and your account goes back to this address.',
+        ],
+        action: { label: 'This was not me', link: d.link! },
+        footer: 'This link works for 7 days.',
+      };
+    case 'auth.identity_link':
+      return {
+        subject: `Confirm signing in to ${APP_NAME} with ${d.providerLabel ?? 'a new account'}`,
+        paragraphs: [
+          hello,
+          `Someone tried to sign in to your ${APP_NAME} account with ${d.providerLabel ?? 'another account'}. Confirm it was you to connect it.`,
+          'If this was not you, ignore this email: nothing changes.',
+        ],
+        action: { label: `Connect ${d.providerLabel ?? 'account'}`, link: d.link! },
+        footer: 'This link expires in 24 hours and works once.',
       };
     case 'workspace.invitation':
       return {

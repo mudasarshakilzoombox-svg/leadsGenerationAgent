@@ -4,6 +4,9 @@ import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG } from '../config/config.module.js';
 import type { ApiEnv, BaseServerEnv, WorkerEnv } from '../config/env.js';
 import { RateLimiter } from '../platform/rate-limit/rate-limiter.js';
+import { valkeyKey } from '../queue/jobs.js';
+import { REDIS } from '../redis/redis.module.js';
+import type { Redis } from 'ioredis';
 import { FieldCrypto } from '../security/field-crypto.js';
 import { SafeFetch } from '../security/safe-fetch.js';
 import { UnsubscribeTokens } from '../security/signed-token.js';
@@ -22,6 +25,14 @@ import {
   TurnstileHumanVerifier,
 } from './identity/infrastructure/human-verifier.js';
 import { PasswordHasher } from './identity/infrastructure/password-hasher.js';
+import {
+  FakeOidcProvider,
+  OIDC_PROVIDERS,
+  type OidcProviderMap,
+  OpenIdClientProvider,
+} from './identity/infrastructure/oidc-provider.js';
+import { OAuthService } from './identity/application/oauth.service.js';
+import { ProfileService } from './identity/application/profile.service.js';
 import { InsightsQueries } from './insights/insights.queries.js';
 import { NotificationDeliveryService } from './notifications/notification-delivery.service.js';
 import { NotificationDispatcher } from './notifications/notification-dispatcher.js';
@@ -118,6 +129,37 @@ export class IdentityModule {
           env.INTEGRATIONS_MODE === 'real' && env.TURNSTILE_SECRET_KEY
             ? new TurnstileHumanVerifier(env.TURNSTILE_SECRET_KEY)
             : new FakeHumanVerifier(),
+      },
+      OAuthService,
+      ProfileService,
+      {
+        provide: OIDC_PROVIDERS,
+        inject: [APP_CONFIG, REDIS],
+        useFactory: (env: ApiEnv, redis: Redis): OidcProviderMap => {
+          if (env.INTEGRATIONS_MODE === 'fake') {
+            const prefix = valkeyKey(env, 'oauth-fake');
+            return {
+              google: new FakeOidcProvider('google', env.APP_ORIGIN, redis, prefix),
+              microsoft: new FakeOidcProvider('microsoft', env.APP_ORIGIN, redis, prefix),
+            };
+          }
+          const map: OidcProviderMap = {};
+          if (env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET) {
+            map.google = new OpenIdClientProvider(
+              'google',
+              env.GOOGLE_OAUTH_CLIENT_ID,
+              env.GOOGLE_OAUTH_CLIENT_SECRET,
+            );
+          }
+          if (env.MS_OAUTH_CLIENT_ID && env.MS_OAUTH_CLIENT_SECRET) {
+            map.microsoft = new OpenIdClientProvider(
+              'microsoft',
+              env.MS_OAUTH_CLIENT_ID,
+              env.MS_OAUTH_CLIENT_SECRET,
+            );
+          }
+          return map;
+        },
       },
     ];
     return { module: IdentityModule, global: true, providers, exports: providers };

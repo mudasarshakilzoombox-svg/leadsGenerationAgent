@@ -92,6 +92,8 @@ export const UserSummarySchema = z.object({
   isPlatformAdmin: z.boolean(),
   locale: z.string().nullable(),
   timezone: z.string().nullable(),
+  /** False for accounts created with Google/Microsoft that never set a password. */
+  hasPassword: z.boolean(),
 });
 export type UserSummary = z.infer<typeof UserSummarySchema>;
 
@@ -128,3 +130,88 @@ export const SessionSummarySchema = z.object({
   lastSeenAt: z.iso.datetime(),
 });
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+
+// ------------------------------------------------------------------ OAuth sign-in (AUTH-03)
+
+/** Sign-in identity providers (08-authentication §4.3). Never mailbox providers. */
+export const OAUTH_PROVIDERS = ['google', 'microsoft'] as const;
+export const OAuthProviderSchema = z.enum(OAUTH_PROVIDERS);
+export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
+
+export const OAuthProvidersResponseSchema = z.object({ providers: z.array(OAuthProviderSchema) });
+export type OAuthProvidersResponse = z.infer<typeof OAuthProvidersResponseSchema>;
+
+export const OAuthStartQuerySchema = z.object({
+  next: z.string().max(512).optional(),
+  intent: z.enum(['login', 'link']).default('login'),
+});
+
+/** Error codes the OAuth callback puts on `/login?error=` (no secrets, no emails). */
+export const OAUTH_ERROR_CODES = [
+  'oauth_failed',
+  'oauth_cancelled',
+  'oauth_state',
+  'oauth_unverified_email',
+  'oauth_identity_in_use',
+  'oauth_disabled',
+  'oauth_link_expired',
+] as const;
+export type OAuthErrorCode = (typeof OAUTH_ERROR_CODES)[number];
+
+/** Pending identity link waiting for the account password (`/login/link`). */
+export const OAuthPendingLinkSchema = z.object({
+  provider: OAuthProviderSchema,
+  /** Masked address of the existing account, e.g. `o•••@acme-growth.test`. */
+  maskedEmail: z.string(),
+});
+export type OAuthPendingLink = z.infer<typeof OAuthPendingLinkSchema>;
+
+export const OAuthLinkRequestSchema = z.strictObject({ password: z.string().min(1).max(1024) });
+export type OAuthLinkRequest = z.infer<typeof OAuthLinkRequestSchema>;
+
+export const AuthIdentitySchema = z.object({
+  id: z.uuid(),
+  provider: OAuthProviderSchema,
+  email: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+});
+export type AuthIdentitySummary = z.infer<typeof AuthIdentitySchema>;
+export const AuthIdentitiesResponseSchema = z.object({ data: z.array(AuthIdentitySchema) });
+
+// ------------------------------------------------------------------ profile (AUTH-06)
+
+/** Valid IANA time zone (as the runtime knows it). */
+export const TimezoneSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .refine(
+    (tz) => {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { error: 'Choose a valid time zone.' },
+  );
+
+export const UpdateProfileRequestSchema = z
+  .strictObject({
+    name: DisplayNameSchema.optional(),
+    timezone: TimezoneSchema.nullable().optional(),
+  })
+  .refine((v) => v.name !== undefined || v.timezone !== undefined, {
+    error: 'Nothing to update.',
+  });
+export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
+
+export const ChangePasswordRequestSchema = z.strictObject({
+  currentPassword: z.string().min(1).max(1024),
+  newPassword: PasswordSchema,
+});
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;
+
+export const ChangeEmailRequestSchema = z.strictObject({ newEmail: EmailSchema });
+export type ChangeEmailRequest = z.infer<typeof ChangeEmailRequestSchema>;

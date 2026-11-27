@@ -48,6 +48,10 @@ enum IdentityProvider {
 enum VerificationPurpose {
   EMAIL_VERIFY
   EMAIL_CHANGE
+  /// Old-address "this wasn't me" link after an email change (08-authentication §4.5). new_email = old address.
+  EMAIL_CHANGE_REVERT
+  /// Emailed proof of account ownership before linking a Google/Microsoft identity (§4.3, AUTH-03 AC2).
+  IDENTITY_LINK
 
   @@map("verification_purpose")
 }
@@ -705,6 +709,8 @@ model VerificationToken {
   tokenHash Bytes               @unique @map("token_hash")
   /// Target address for EMAIL_CHANGE.
   newEmail  String?             @map("new_email")
+  /// IDENTITY_LINK only: the pending identity {provider, subject, email}. Never a token.
+  payload   Json?
   expiresAt DateTime            @map("expires_at") @db.Timestamptz(3)
   usedAt    DateTime?           @map("used_at") @db.Timestamptz(3)
   createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)

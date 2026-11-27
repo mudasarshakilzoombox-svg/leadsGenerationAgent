@@ -5,6 +5,8 @@ import 'reflect-metadata';
 import { RequestMethod } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { AuthController } from '../src/auth/auth.controller.js';
+import { OAuthController } from '../src/auth/oauth.controller.js';
+import { ProfileController } from '../src/auth/profile.controller.js';
 import { DashboardController } from '../src/dashboard/dashboard.controller.js';
 import { IS_PUBLIC, REQUIRED_PERMISSIONS, SELF_SERVICE } from '../src/auth/request-context.js';
 import { TenantGuard } from '../src/auth/tenant.guard.js';
@@ -19,6 +21,8 @@ import {
 
 const CONTROLLERS = [
   AuthController,
+  OAuthController,
+  ProfileController,
   WorkspacesController,
   MembersController,
   InvitationsController,
@@ -36,6 +40,18 @@ const EXPECTED_PUBLIC = [
   'POST auth/login',
   'POST auth/password/forgot',
   'POST auth/password/reset',
+  // Google / Microsoft sign-in (AUTH-03): the callback and link steps run before a session exists.
+  'GET auth/providers',
+  'GET auth/oauth/:provider/start',
+  'GET auth/oauth/:provider/callback',
+  'GET auth/oauth/link',
+  'POST auth/oauth/link',
+  'POST auth/oauth/link/confirm',
+  'GET auth/oauth/fake/:provider',
+  'GET auth/oauth/fake/:provider/authorize',
+  // Email change links are opened from an inbox, possibly signed out (AUTH-06).
+  'POST auth/email/confirm',
+  'POST auth/email/revert',
   'GET invitations/lookup',
   'GET health/live',
   'GET health/ready',

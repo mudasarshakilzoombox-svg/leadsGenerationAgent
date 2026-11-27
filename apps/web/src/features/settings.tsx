@@ -64,6 +64,8 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { DetailList, PageHeader, StatusBadge } from '@/components/data';
 import { applyApiError, Field, SubmitButton } from '@/components/forms';
+import { ReauthDialog } from '@/components/reauth-dialog';
+import { ProfileTab } from './profile';
 import {
   ComingSoon,
   ConfirmDialog,
@@ -196,71 +198,6 @@ function InviteDialog({
             </DialogFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Step-up (08-authentication §7): asks for the password, then retries the action. */
-function ReauthDialog({
-  open,
-  onOpenChange,
-  onDone,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  onDone: () => void;
-}) {
-  const form = useForm<{ password: string }>({
-    resolver: zodResolver(z.object({ password: z.string().min(1, 'Enter your password.') })),
-    defaultValues: { password: '' },
-  });
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Confirm your password</DialogTitle>
-          <DialogDescription>
-            For your security, confirm your password to continue.
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          method="post"
-          noValidate
-          className="space-y-4"
-          onSubmit={form.handleSubmit(async ({ password }) => {
-            try {
-              await api('/auth/reauthenticate', null, { method: 'POST', body: { password } });
-              form.reset();
-              onOpenChange(false);
-              onDone();
-            } catch (error) {
-              if (error instanceof ApiError && error.status === 401)
-                form.setError('password', { message: error.message });
-              else applyApiError(error);
-            }
-          })}
-        >
-          <Field label="Password" error={form.formState.errors.password?.message}>
-            {(p) => (
-              <Input
-                {...p}
-                type="password"
-                autoComplete="current-password"
-                autoFocus
-                {...form.register('password')}
-              />
-            )}
-          </Field>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <SubmitButton pending={form.formState.isSubmitting} pendingLabel="Checking…">
-              Confirm
-            </SubmitButton>
-          </DialogFooter>
-        </form>
       </DialogContent>
     </Dialog>
   );
@@ -651,7 +588,6 @@ export function SettingsView({
 }: {
   workspace: WorkspaceSummary & { roleKey: string; permissions: string[] };
 }) {
-  const { user } = useWorkspace();
   const pathname = usePathname();
   const search = useSearchParams();
   const tab = (TABS as readonly string[]).includes(search.get('tab') ?? '')
@@ -707,31 +643,7 @@ export function SettingsView({
           <SessionsTab />
         </TabsContent>
         <TabsContent value="profile">
-          <Card className="gap-4">
-            <CardHeader className="flex flex-row items-start justify-between gap-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base">Your profile</CardTitle>
-                <CardDescription>
-                  {user.emailVerified ? 'Email verified' : 'Email not verified yet'}
-                </CardDescription>
-              </div>
-              <ComingSoon
-                phase={PHASE.profile}
-                label="Edit profile"
-                reason="Name, time zone, password and email change."
-              />
-            </CardHeader>
-            <CardContent>
-              <DetailList
-                items={[
-                  { label: 'Name', value: user.name },
-                  { label: 'Email', value: <span className="break-all">{user.email}</span> },
-                  { label: 'Time zone', value: user.timezone },
-                  { label: 'Language', value: user.locale },
-                ]}
-              />
-            </CardContent>
-          </Card>
+          <ProfileTab />
         </TabsContent>
       </Tabs>
     </div>

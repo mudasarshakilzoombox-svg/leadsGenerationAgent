@@ -1,6 +1,7 @@
 # ADR-0034: Authentication implementation choices and the READ_ONLY workspace role
 
 - **Status:** Accepted · **Date:** 2026-11-27 · **Amends:** ADR-0016 (roles), 08-authentication.md §4.1, §5, §6; ARCHITECTURE.md API catalogue
+- **Follow-up (2026-11-27, P0.3):** Google/Microsoft sign-in (AUTH-03) and profile settings (AUTH-06) build on this design: they reuse `AuthService.signIn` and `verifyAccountPassword`, the worker-minted tokens and `@RequireRecentAuth`. See 08-authentication §4.3 and §4.5.
 
 ## Context
 The approved request asked for registration, login, logout, email verification, password reset, secure sessions, workspace creation, invitations, team management and RBAC with four roles: OWNER, ADMIN, MEMBER and **READ_ONLY**. The docs defined three roles. READ_ONLY was listed only as a future "Viewer/Client". The docs also disagreed on several details (listed below), which had to be settled to implement the feature.

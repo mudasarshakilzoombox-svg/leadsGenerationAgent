@@ -61,6 +61,7 @@ function withWorkspace(
           isPlatformAdmin: false,
           locale: null,
           timezone: null,
+          hasPassword: true,
         }}
         membership={membership}
         memberships={[membership]}

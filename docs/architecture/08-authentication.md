@@ -76,6 +76,13 @@ sequenceDiagram
 - **Linking rules:** if `auth_identities(provider, sub)` exists, sign in. Else, if the IdP asserts `email_verified=true` (Google) or the email is a verified tenant UPN (Microsoft) and it matches an existing user, **require the existing password** (or an emailed link for OAuth-only users) before linking (AUTH-03 AC2). Else create a new user with `email_verified_at=now`.
 - Redirect URIs are exact-match (`https://app.<domain>/api/v1/auth/oauth/{provider}/callback`). No open redirect: the post-login `next` parameter must be a relative path matching `^/[a-z0-9/_-]*$`.
 
+> **As implemented (2026-11-27, P0.3):** `OAuthService` and `OidcProviderPort` (`packages/core/src/modules/identity`), with `openid-client` for real providers. Microsoft's templated `{tenantid}` issuer is validated with the token's `tid`. Details:
+> - State, nonce and the PKCE verifier live in a signed `__Host-lga_oauth` cookie (10 minutes, HttpOnly, SameSite=Lax), keyed from `SESSION_PEPPER`.
+> - Linking an existing password account sets a signed `__Host-lga_oauth_link` cookie; `/login/link` then asks for the password, with the same lockout as login.
+> - Accounts without a password get an `IDENTITY_LINK` email instead (24 h, single use).
+> - Settings → Profile can connect (`intent=link`, bound to the signed-in user) and disconnect methods, never the last way to sign in.
+> - In `INTEGRATIONS_MODE=fake`, a built-in fake identity provider page (`/api/v1/auth/oauth/fake/:provider`) replaces Google and Microsoft. A provider is enabled in real mode when its client ID and secret are set. Setup checklist: `docs/LONG_LEAD_TASKS.md`.
+
 ### 4.4 Password reset
 
 Same response regardless of account existence. Reset links are built from the configured `APP_ORIGIN`, **never** from the request `Host` header (reset-poisoning defense). A successful reset revokes all sessions and emails a confirmation.
@@ -83,6 +90,13 @@ Same response regardless of account existence. Reset links are built from the co
 ### 4.5 Email change
 
 Requires step-up (§7). The verification link goes to the new email. The old email gets a notice with a "This wasn't me" link that revokes sessions and reverts the change within 7 days.
+
+> **As implemented (2026-11-27, P0.3):** `ProfileService`:
+> - The request stores an `EMAIL_CHANGE` row (with `new_email`) and the worker mints the token at send time. The response is the same whether or not the address is taken.
+> - Confirming switches the address, keeps it verified, and creates an `EMAIL_CHANGE_REVERT` row with the old address. The worker sends the notice with the revert link to the old address, showing the new address masked.
+> - Revert restores the old address and revokes every session.
+>
+> Password change needs the current password, signs out the other sessions and sends `auth.password_changed`.
 
 ## 5. Brute-force and abuse defense
 

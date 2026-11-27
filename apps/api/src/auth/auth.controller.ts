@@ -50,6 +50,7 @@ export function toUserSummary(user: SessionUser): UserSummary {
     isPlatformAdmin: user.platformRole === 'SUPER_ADMIN',
     locale: user.locale,
     timezone: user.timezone,
+    hasPassword: user.hasPassword,
   };
 }
 

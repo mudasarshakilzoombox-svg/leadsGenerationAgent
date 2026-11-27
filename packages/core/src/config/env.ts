@@ -108,6 +108,14 @@ export const apiEnvSchema = z
     EMAIL_HASH_PEPPER: pepper,
     /** Cloudflare Turnstile server secret. Required with INTEGRATIONS_MODE=real. */
     TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+    /**
+     * Sign-in with Google / Microsoft (AUTH-03): OIDC client credentials. A provider is enabled in
+     * real mode when both values are set; fake mode always enables a built-in fake provider.
+     */
+    GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+    MS_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+    MS_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     refineServerEnv(env, ctx);

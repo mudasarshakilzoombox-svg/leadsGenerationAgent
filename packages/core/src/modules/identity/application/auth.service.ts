@@ -88,7 +88,7 @@ export class AuthService {
     await this.limiter.consume(AUTH_LIMITS.ipPerMinute, this.ipKey(meta));
   }
 
-  private async assertPasswordNotBreached(password: string, pointer: string): Promise<void> {
+  async assertPasswordNotBreached(password: string, pointer: string): Promise<void> {
     if (await this.breached.isBreached(password)) {
       throw fieldError(
         pointer,
@@ -326,38 +326,51 @@ export class AuthService {
       this.limiter.reset(AUTH_LIMITS.loginFailAccount.scope, account),
       this.limiter.reset(LOGIN_DELAY_SCOPE, account),
     ]);
-    const isNewDevice = await this.isNewDevice(user.id, meta);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-        failedLoginCount: 0,
-        lockedUntil: null,
-        ...(user.passwordHash && this.hasher.needsRehash(user.passwordHash)
-          ? { passwordHash: await this.hasher.hash(input.password) }
-          : {}),
-      },
-    });
+    if (user.passwordHash && this.hasher.needsRehash(user.passwordHash)) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await this.hasher.hash(input.password) },
+      });
+    }
+    return this.signIn(user.id, meta, currentToken, { method: 'password' });
+  }
 
+  /**
+   * Final step of every successful sign-in (password, Google, Microsoft): clears lockout state,
+   * replaces any presented session (fixation defense), creates the session, audits and sends the
+   * new-device notice (AUTH-04 AC4).
+   */
+  async signIn(
+    userId: string,
+    meta: RequestMeta,
+    currentToken: string | undefined,
+    how: { method: 'password' | 'google' | 'microsoft' },
+  ): Promise<LoginResult> {
+    const isNewDevice = await this.isNewDevice(userId, meta);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null },
+    });
     // Session fixation defense: a session presented at login is replaced, never upgraded.
     if (currentToken) {
       const previous = await this.sessions.resolve(currentToken);
       if (previous) await this.sessions.revoke(previous.id, previous.userId);
     }
-    const result = await this.sessions.create(user.id, meta);
+    const result = await this.sessions.create(userId, meta);
     await this.audit.record(
       {
         action: 'auth.login_succeeded',
-        actorUserId: user.id,
+        actorUserId: userId,
         targetType: 'session',
         targetId: result.session.id,
+        metadata: { method: how.method },
       },
       meta,
     );
     if (isNewDevice) {
       await this.notify.email(
         'auth.new_device',
-        { type: 'user', id: user.id },
+        { type: 'user', id: userId },
         { requestId: meta.requestId },
       );
     }
@@ -530,7 +543,21 @@ export class AuthService {
   // ------------------------------------------------------------------ step-up (08 §7)
 
   async reauthenticate(session: ActiveSession, password: string, meta: RequestMeta): Promise<void> {
-    const account = this.accountKey(session.user.emailNormalized);
+    await this.verifyAccountPassword(session.userId, session.user.emailNormalized, password, meta);
+    await this.sessions.markReauthenticated(session.id);
+  }
+
+  /**
+   * Checks an account's current password with the login lockout and progressive delay
+   * (08-authentication §5): used by re-auth, password change and identity linking.
+   */
+  async verifyAccountPassword(
+    userId: string,
+    emailNormalized: string,
+    password: string,
+    meta: RequestMeta,
+  ): Promise<void> {
+    const account = this.accountKey(emailNormalized);
     const waitSeconds = await this.limiter.blockedFor(LOGIN_DELAY_SCOPE, account);
     if (waitSeconds > 0) {
       throw new DomainError(
@@ -542,14 +569,14 @@ export class AuthService {
       );
     }
     const user = await this.prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { passwordHash: true },
+      where: { id: userId },
+      select: { passwordHash: true, lockedUntil: true },
     });
-    if (!(await this.hasher.verify(user?.passwordHash, password))) {
-      await this.recordLoginFailure(account, this.ipKey(meta), session.userId, meta, false);
+    const locked = Boolean(user?.lockedUntil && user.lockedUntil > new Date());
+    if (locked || !(await this.hasher.verify(user?.passwordHash, password))) {
+      await this.recordLoginFailure(account, this.ipKey(meta), userId, meta, locked);
       throw new DomainError('UNAUTHENTICATED', 'The password is incorrect.');
     }
-    await this.sessions.markReauthenticated(session.id);
   }
 
   // ---------------------------------------------------------------------- sessions

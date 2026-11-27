@@ -50,6 +50,10 @@ export const EMAIL_TEMPLATES = [
   'auth.new_device',
   'auth.account_locked',
   'workspace.invitation',
+  // Sent for `verification_token` entities: the worker mints the token and sends to `new_email`.
+  'auth.email_change_verify',
+  'auth.email_changed',
+  'auth.identity_link',
 ] as const;
 export const EmailTemplateSchema = z.enum(EMAIL_TEMPLATES);
 export type EmailTemplate = z.infer<typeof EmailTemplateSchema>;

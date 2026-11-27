@@ -158,7 +158,7 @@ class DomainError extends Error {
 | Data | `DATABASE_URL` (app role), `DATABASE_MIGRATOR_URL` (migrate container only), `VALKEY_URL` |
 | Crypto | `APP_ENCRYPTION_KEYS` (JSON `{version: base64}`), `APP_ENCRYPTION_ACTIVE_VERSION`, `EMAIL_HASH_PEPPER`, `UNSUBSCRIBE_TOKEN_KEYS`, `UNSUBSCRIBE_TOKEN_ACTIVE_KEY_ID`, `SESSION_PEPPER` |
 | AI | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (required in real mode for every routed provider), `AI_ROUTING_FILE`, `AI_PRICING_FILE` (default `packages/core/config/*.yaml`), `AI_DISABLED` (global kill switch) |
-| Providers | `VERIFIER_API_KEY`, `SEARCH_API_KEY`, `MS_OAUTH_CLIENT_ID/SECRET`, `GOOGLE_OAUTH_CLIENT_ID/SECRET`, `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SES_*` or `RESEND_API_KEY` |
+| Providers | `VERIFIER_API_KEY`, `SEARCH_API_KEY`, `MS_OAUTH_CLIENT_ID/SECRET`, `GOOGLE_OAUTH_CLIENT_ID/SECRET` (sign-in, API only; a provider is enabled when both are set), `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SES_*` or `RESEND_API_KEY` |
 | Storage | `S3_ENDPOINT`, `S3_BUCKET_FILES`, `S3_ACCESS_KEY_ID/SECRET` |
 | Observability | `SENTRY_DSN`, `LOG_LEVEL` |
 | Modes | `INTEGRATIONS_MODE` (`real`/`fake`), `ADMIN_IP_ALLOWLIST` |

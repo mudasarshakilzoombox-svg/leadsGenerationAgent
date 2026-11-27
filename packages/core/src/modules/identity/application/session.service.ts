@@ -18,6 +18,8 @@ export interface SessionUser {
   platformRole: 'NONE' | 'SUPER_ADMIN';
   locale: string | null;
   timezone: string | null;
+  /** False for Google/Microsoft-only accounts. Only the flag is kept: never the hash. */
+  hasPassword: boolean;
 }
 
 export interface ActiveSession {
@@ -40,6 +42,7 @@ const userSelect = {
   platformRole: true,
   locale: true,
   timezone: true,
+  passwordHash: true,
   deletedAt: true,
 } as const;
 
@@ -234,11 +237,12 @@ type SessionRow = {
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
   reauthenticatedAt: Date | null;
-  user: SessionUser & { deletedAt: Date | null };
+  user: Omit<SessionUser, 'hasPassword'> & { deletedAt: Date | null; passwordHash: string | null };
 };
 
 function toActive(row: SessionRow): ActiveSession {
-  const { deletedAt: _deleted, ...user } = row.user;
+  const { deletedAt: _deleted, passwordHash, ...rest } = row.user;
+  const user: SessionUser = { ...rest, hasPassword: passwordHash !== null };
   return {
     id: row.id,
     userId: row.userId,

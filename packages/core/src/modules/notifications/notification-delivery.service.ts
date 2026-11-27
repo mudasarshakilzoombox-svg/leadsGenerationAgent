@@ -4,7 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { BaseServerEnv } from '../../config/env.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { generateToken, hashToken } from '../identity/domain/identity.js';
+import { generateToken, hashToken, maskEmail } from '../identity/domain/identity.js';
 import { AUTH_TOKEN_TTL } from '../identity/domain/token-ttl.js';
 import { SYSTEM_MAILER, type SystemMailer } from './system-mailer.js';
 import { renderEmail, type TemplateData } from './templates.js';
@@ -42,7 +42,9 @@ export class NotificationDeliveryService {
     const outcome =
       envelope.entity.type === 'invitation'
         ? await this.deliverInvitation(template, envelope.entity.id)
-        : await this.deliverToUser(template, envelope.entity.id);
+        : envelope.entity.type === 'verification_token'
+          ? await this.deliverVerificationToken(template, envelope.entity.id)
+          : await this.deliverToUser(template, envelope.entity.id);
     this.logger.info(
       { template, entityType: envelope.entity.type, entityId: envelope.entity.id, outcome },
       'System email processed',
@@ -101,9 +103,75 @@ export class NotificationDeliveryService {
         data.link = this.link('/forgot-password');
         break;
       case 'workspace.invitation':
+      case 'auth.email_change_verify':
+      case 'auth.email_changed':
+      case 'auth.identity_link':
         return 'skipped';
     }
     await this.send(template, user.email, data);
+    return 'sent';
+  }
+
+  /**
+   * Email change, its revert notice and identity-link confirmation (08-authentication §4.3, §4.5).
+   * The API stores the request with an unusable placeholder hash; the real token is minted here,
+   * at send time, and only its hash is stored (ADR-0034).
+   */
+  private async deliverVerificationToken(
+    template: EmailTemplate,
+    id: string,
+  ): Promise<DeliveryOutcome> {
+    const plan = {
+      'auth.email_change_verify': { purpose: 'EMAIL_CHANGE', path: '/email/confirm' },
+      'auth.email_changed': { purpose: 'EMAIL_CHANGE_REVERT', path: '/email/revert' },
+      'auth.identity_link': { purpose: 'IDENTITY_LINK', path: '/login/link/confirm' },
+    } as const;
+    if (!(template in plan)) return 'skipped';
+    const { purpose, path } = plan[template as keyof typeof plan];
+    const row = await this.prisma.verificationToken.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        purpose: true,
+        newEmail: true,
+        payload: true,
+        usedAt: true,
+        expiresAt: true,
+        user: { select: { email: true, name: true, deletedAt: true } },
+      },
+    });
+    if (
+      !row ||
+      row.purpose !== purpose ||
+      row.usedAt ||
+      row.expiresAt <= new Date() ||
+      row.user.deletedAt
+    ) {
+      return 'skipped';
+    }
+    const token = generateToken();
+    const updated = await this.prisma.verificationToken.updateMany({
+      where: { id: row.id, usedAt: null },
+      data: { tokenHash: hashToken(token) },
+    });
+    if (updated.count !== 1) return 'skipped';
+
+    const data: TemplateData = { name: row.user.name, link: this.link(path, token) };
+    let to = row.user.email;
+    if (purpose === 'EMAIL_CHANGE') {
+      // Verification goes to the NEW address.
+      if (!row.newEmail) return 'skipped';
+      to = row.newEmail;
+    } else if (purpose === 'EMAIL_CHANGE_REVERT') {
+      // The notice goes to the OLD address (stored in new_email), naming the new one masked.
+      if (!row.newEmail) return 'skipped';
+      to = row.newEmail;
+      data.maskedEmail = maskEmail(row.user.email);
+    } else {
+      const provider = (row.payload as { provider?: string } | null)?.provider;
+      data.providerLabel = provider === 'microsoft' ? 'Microsoft' : 'Google';
+    }
+    await this.send(template, to, data);
     return 'sent';
   }
 

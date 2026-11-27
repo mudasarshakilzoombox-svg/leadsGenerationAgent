@@ -96,6 +96,7 @@ describe('permissions', () => {
     isPlatformAdmin: false,
     locale: null,
     timezone: null,
+    hasPassword: true,
   };
   const membership = (permissions: string[]): MembershipSummary => ({
     membershipId: 'm',
