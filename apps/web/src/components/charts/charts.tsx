@@ -11,6 +11,10 @@ const TrendChartImpl = dynamic(() => import('./recharts-impl'), {
   ssr: false,
   loading: () => <ChartSkeleton className="h-full" />,
 });
+const MiniLineChartImpl = dynamic(
+  () => import('./recharts-impl').then((m) => m.MiniLineChartImpl),
+  { ssr: false, loading: () => <ChartSkeleton className="h-full" /> },
+);
 const BarChartImpl = dynamic(() => import('./recharts-impl').then((m) => m.BarChartImpl), {
   ssr: false,
   loading: () => <ChartSkeleton className="h-full" />,
@@ -101,6 +105,38 @@ export function BarBreakdown({
           {data.map((d) => (
             <tr key={d.label}>
               <th scope="row">{d.label}</th>
+              <td>{d.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}
+
+/** A small daily line for one metric, with a screen-reader table alternative. */
+export function MiniLineChart({
+  data,
+  name,
+  color,
+  className,
+}: {
+  data: { date: string; value: number }[];
+  name: string;
+  color?: string;
+  className?: string;
+}) {
+  return (
+    <figure className={cn('m-0', className)}>
+      <div className="h-full" aria-hidden>
+        <MiniLineChartImpl data={data} name={name} {...(color ? { color } : {})} />
+      </div>
+      <table className="sr-only">
+        <caption>{name} per day</caption>
+        <tbody>
+          {data.map((d) => (
+            <tr key={d.date}>
+              <th scope="row">{d.date}</th>
               <td>{d.value}</td>
             </tr>
           ))}

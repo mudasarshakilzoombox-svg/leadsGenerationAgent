@@ -66,8 +66,8 @@ export function IntegrationsView({ data }: { data: Integrations }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Integrations"
-        description="Mailboxes, sending domains, data providers and calendars. Credentials are encrypted and never shown."
+        title="Channels"
+        description="Where outreach is sent from and what powers it: mailboxes, sending domains, data providers and calendars. Credentials are encrypted and never shown."
       />
       <div className="grid-cols-1 grid gap-6 lg:grid-cols-2">
         <Section

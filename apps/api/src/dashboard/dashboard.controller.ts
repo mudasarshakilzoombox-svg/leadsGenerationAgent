@@ -22,7 +22,13 @@ import {
   type MeetingItem,
   MeetingQuerySchema,
   type Overview,
+  OverviewQuerySchema,
+  ProjectFilterSchema,
+  type Projects,
   RangeQuerySchema,
+  type SentItem,
+  SentQuerySchema,
+  type Sequences,
 } from '@lga/contracts';
 import {
   AccountQueries,
@@ -56,11 +62,33 @@ export class DashboardController {
   overview(
     @CurrentAccess() access: WorkspaceAccess,
     @CurrentSession() session: ActiveSession,
-    @Query(new ZodValidationPipe(RangeQuerySchema)) query: z.infer<typeof RangeQuerySchema>,
+    @Query(new ZodValidationPipe(OverviewQuerySchema)) query: z.infer<typeof OverviewQuerySchema>,
   ): Promise<Overview> {
-    return this.insights.overview(access, query.range, {
+    return this.insights.overview(access, query, {
       emailVerified: session.user.emailVerifiedAt !== null,
     });
+  }
+
+  /** Projects (business profiles) and their campaigns for the sidebar (ADR-0036). */
+  @Get('projects')
+  projects(@CurrentAccess() access: WorkspaceAccess): Promise<Projects> {
+    return this.outreach.projects(access);
+  }
+
+  @Get('sent')
+  sent(
+    @CurrentAccess() access: WorkspaceAccess,
+    @Query(new ZodValidationPipe(SentQuerySchema)) query: z.infer<typeof SentQuerySchema>,
+  ): Promise<PageResult<SentItem>> {
+    return this.outreach.sent(access, query);
+  }
+
+  @Get('sequences')
+  sequences(
+    @CurrentAccess() access: WorkspaceAccess,
+    @Query(new ZodValidationPipe(ProjectFilterSchema)) query: z.infer<typeof ProjectFilterSchema>,
+  ): Promise<Sequences> {
+    return this.outreach.sequences(access, query);
   }
 
   @Get('analytics')

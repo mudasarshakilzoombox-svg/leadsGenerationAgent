@@ -1,4 +1,4 @@
-// Read-only dashboard endpoints (ADR-0035): shapes, filters, pagination, exact metrics
+// Read-only dashboard endpoints (ADR-0035, ADR-0036 projects): shapes, filters, pagination, exact metrics
 // (PRD ANA-01 AC3), no credential leakage, READ_ONLY access and cross-tenant isolation.
 import {
   AnalyticsSchema,
@@ -11,6 +11,9 @@ import {
   IntegrationsSchema,
   LeadListDetailSchema,
   OverviewSchema,
+  ProjectsSchema,
+  type SentItem,
+  SequencesSchema,
 } from '@lga/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Harness, type TestUser } from '../auth/harness.js';
@@ -304,7 +307,31 @@ async function seedGraph(workspaceId: string) {
       expiresAt: new Date(Date.now() + 30 * DAY),
     },
   });
+  // Credits: 5 settled in range, 2 settled in the previous period, 9 still reserved (ignored).
+  const ledger = (
+    key: string,
+    millicredits: bigint,
+    status: 'SETTLED' | 'RESERVED',
+    days: number,
+  ) => ({
+    workspaceId,
+    metric: 'CREDITS' as const,
+    action: 'verification',
+    quantity: millicredits,
+    status,
+    period: ago(days).toISOString().slice(0, 7),
+    idempotencyKey: `${workspaceId}-${key}`,
+    createdAt: ago(days),
+  });
+  await p.usageLedger.createMany({
+    data: [
+      ledger('now', 5_000n, 'SETTLED', 2),
+      ledger('before', 2_000n, 'SETTLED', 40),
+      ledger('open', 9_000n, 'RESERVED', 1),
+    ],
+  });
   return {
+    profile: profile.id,
     company: company.id,
     contact: contacts[0]!.id,
     list: list.id,
@@ -369,6 +396,113 @@ describe('overview and analytics', () => {
     });
     expect(a.mailboxes[0]).toMatchObject({ sent: 3, hardBounced: 1 });
     expect(a.credits.remaining).toBe(120);
+  });
+});
+
+describe('projects and performance (ADR-0036)', () => {
+  it('lists projects with their campaigns', async () => {
+    const projects = ProjectsSchema.parse((await owner.client.get(path('projects'))).body);
+    expect(projects.unreadReplies).toBe(1);
+    const mine = projects.data.find((p) => p.id === ids.profile)!;
+    expect(mine.campaigns).toEqual([{ id: ids.campaign, name: 'Dash Campaign', status: 'ACTIVE' }]);
+  });
+
+  it('computes performance cards exactly, for the workspace and for the project', async () => {
+    for (const query of ['overview?range=30d', `overview?range=30d&project=${ids.profile}`]) {
+      const o = OverviewSchema.parse((await owner.client.get(path(query))).body);
+      const m = Object.fromEntries(o.performance.map((x) => [x.key, x]));
+      expect(m.sent).toMatchObject({ value: 3, previous: 1, change: 2 });
+      expect(m.delivered).toMatchObject({ value: 2, previous: 1 }); // 3 sent - 1 hard bounce
+      expect(m.hotLeads).toMatchObject({ value: 1, previous: 0 }); // r1's positive reply
+      expect(m.creditsUsed).toMatchObject({ value: 5, previous: 2, format: 'credits' });
+      expect(m.sent!.series.reduce((sum, d) => sum + d.value, 0)).toBe(3);
+      expect(m.delivered!.series.reduce((sum, d) => sum + d.value, 0)).toBe(2);
+      expect(m.creditsUsed!.series.reduce((sum, d) => sum + d.value, 0)).toBe(5);
+    }
+    const filtered = OverviewSchema.parse(
+      (
+        await owner.client.get(
+          path(`overview?range=30d&project=${ids.profile}&campaign=${ids.campaign}`),
+        )
+      ).body,
+    );
+    expect(filtered).toMatchObject({ projectId: ids.profile, campaignId: ids.campaign });
+    // Credits cannot be narrowed to a campaign: the card says it is workspace-wide.
+    expect(filtered.performance.find((x) => x.key === 'creditsUsed')!.scope).toBe('workspace');
+  });
+
+  it('shows empty numbers for a project without campaigns and 404s foreign filters', async () => {
+    const other = await h.prisma.businessProfile.create({
+      data: {
+        workspaceId: ws,
+        name: 'Empty Co',
+        websiteUrl: 'https://empty.example',
+        domain: 'empty.example',
+      },
+    });
+    const o = OverviewSchema.parse(
+      (await owner.client.get(path(`overview?range=30d&project=${other.id}`))).body,
+    );
+    const m = Object.fromEntries(o.performance.map((x) => [x.key, x]));
+    expect(m.sent!.value).toBe(0);
+    expect(m.delivered!.value).toBeNull(); // nothing sent: "no data", not 0
+    // The campaign belongs to another project.
+    expect(
+      (await owner.client.get(path(`overview?project=${other.id}&campaign=${ids.campaign}`)))
+        .status,
+    ).toBe(404);
+    const foreign = await h.prisma.businessProfile.create({
+      data: {
+        workspaceId: outsiderWs,
+        name: 'Foreign',
+        websiteUrl: 'https://f.example',
+        domain: 'f.example',
+      },
+    });
+    for (const q of [
+      `overview?project=${foreign.id}`,
+      `sent?project=${foreign.id}`,
+      `sequences?project=${foreign.id}`,
+      `campaigns?project=${foreign.id}`,
+    ]) {
+      expect((await owner.client.get(path(q))).status).toBe(404);
+    }
+    expect((await owner.client.get(path('overview?project=not-a-uuid'))).status).toBe(400);
+    await h.prisma.businessProfile.deleteMany({ where: { id: { in: [other.id, foreign.id] } } });
+  });
+
+  it('lists sent emails without bodies, filtered by project and campaign', async () => {
+    const res = await owner.client.get(path(`sent?project=${ids.profile}`));
+    const sent = res.body as { data: SentItem[]; nextCursor: string | null };
+    expect(sent.data).toHaveLength(1);
+    expect(sent.data[0]).toMatchObject({
+      conversationId: ids.conversation,
+      campaign: { id: ids.campaign, name: 'Dash Campaign' },
+      stepOrder: 1,
+    });
+    expect(JSON.stringify(res.body)).not.toMatch(/bodyText|Hello Ada/);
+    expect(
+      ((await owner.client.get(path(`sent?campaign=${ids.campaign}`))).body as { data: unknown[] })
+        .data,
+    ).toHaveLength(1);
+  });
+
+  it('returns each campaign sequence with step subjects only', async () => {
+    const res = await owner.client.get(path(`sequences?project=${ids.profile}`));
+    const seq = SequencesSchema.parse(res.body);
+    expect(seq.data[0]!.campaign.id).toBe(ids.campaign);
+    expect(seq.data[0]!.steps.map((s) => [s.stepOrder, s.intent, s.delayDays])).toEqual([
+      [1, 'INTRO', 0],
+      [2, 'FOLLOW_UP', 3],
+    ]);
+    expect(JSON.stringify(res.body)).not.toMatch(/bodyTemplate|aiInstructions/);
+    expect(
+      (
+        (await owner.client.get(path(`campaigns?project=${ids.profile}`))).body as {
+          data: unknown[];
+        }
+      ).data,
+    ).toHaveLength(1);
   });
 });
 
@@ -525,6 +659,9 @@ const ENDPOINTS = [
   'meetings',
   'integrations',
   'billing',
+  'projects',
+  'sent',
+  'sequences',
 ];
 const DETAIL = () => [
   `companies/${ids.company}`,
@@ -561,6 +698,9 @@ describe('access control', () => {
       'campaigns',
       'conversations',
       'meetings',
+      'projects',
+      'sent',
+      'sequences',
     ]) {
       const res = await outsider.client.get(`/workspaces/${outsiderWs}/${endpoint}`);
       expect((res.body as { data: unknown[] }).data).toHaveLength(0);

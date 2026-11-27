@@ -106,7 +106,14 @@ describe('permissions', () => {
 
   it('<Can> renders only with the permission, otherwise the fallback', () => {
     render(
-      <WorkspaceProvider user={user} membership={membership(['analytics.view'])} memberships={[]}>
+      <WorkspaceProvider
+        user={user}
+        membership={membership(['analytics.view'])}
+        memberships={[]}
+        projects={[]}
+        project={null}
+        unreadReplies={0}
+      >
         <Can permission="members.manage" fallback={<span>no access</span>}>
           <button type="button">Invite</button>
         </Can>

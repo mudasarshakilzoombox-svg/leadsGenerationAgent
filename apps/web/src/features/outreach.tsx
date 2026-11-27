@@ -107,20 +107,25 @@ const campaignColumns: Column<CampaignItem>[] = [
 type CampaignStatusFilter = '' | 'DRAFT' | 'PENDING_APPROVAL' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
 
 export function CampaignsView({ initial }: { initial: Initial<CampaignItem> }) {
-  const { href } = useWorkspace();
+  const { href, project } = useWorkspace();
   const [status, setStatus] = useState<CampaignStatusFilter>('');
   const [q, setQ] = useState('');
+  // Campaigns are project-scoped (ADR-0036): the selected project from the sidebar.
   const query = useWorkspaceList(
     'campaigns',
     CampaignItemSchema,
-    { status: status || undefined, q: q || undefined },
-    { ...initial, params: { status: undefined, q: undefined } },
+    { project: project?.id, status: status || undefined, q: q || undefined },
+    { ...initial, params: { project: project?.id, status: undefined, q: undefined } },
   );
   return (
     <div className="space-y-6">
       <PageHeader
         title="Campaigns"
-        description="Personalized email sequences sent from your own mailboxes."
+        description={
+          project
+            ? `Personalized email sequences for ${project.domain}, sent from your own mailboxes.`
+            : 'Personalized email sequences sent from your own mailboxes.'
+        }
         actions={
           <ComingSoon
             phase={PHASE.campaigns}

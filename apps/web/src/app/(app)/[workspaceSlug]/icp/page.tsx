@@ -4,7 +4,7 @@ import { IcpView } from '@/features/records';
 import { serverApi, wsPath } from '@/lib/api/server';
 import { loadWorkspace } from '@/lib/auth/session';
 
-export const metadata: Metadata = { title: 'ICP Builder' };
+export const metadata: Metadata = { title: 'Project docs' };
 
 export default async function IcpPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const { membership } = await loadWorkspace(params);

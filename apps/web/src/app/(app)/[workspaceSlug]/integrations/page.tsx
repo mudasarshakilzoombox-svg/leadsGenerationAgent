@@ -4,7 +4,7 @@ import { IntegrationsView } from '@/features/account';
 import { serverApi, wsPath } from '@/lib/api/server';
 import { loadWorkspace } from '@/lib/auth/session';
 
-export const metadata: Metadata = { title: 'Integrations' };
+export const metadata: Metadata = { title: 'Channels' };
 
 export default async function IntegrationsPage({
   params,

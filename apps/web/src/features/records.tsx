@@ -714,8 +714,8 @@ export function IcpView({ data }: { data: IcpOverview }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ICP Builder"
-        description="Ideal customer profiles generated from your website and refined by your team."
+        title="Project docs"
+        description="What the agent knows about your business: your website analysis, offer and ideal customer profiles (ICPs)."
         actions={
           <ComingSoon
             phase={PHASE.icpEdit}

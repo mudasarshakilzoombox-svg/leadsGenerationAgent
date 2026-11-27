@@ -39,3 +39,4 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0033](ADR-0033-schema-v1-entities.md) | Schema v1 entities, code-synced catalog tables, tenant-safe delete policies | Accepted | — |
 | [0034](ADR-0034-auth-implementation-and-read-only-role.md) | Authentication implementation choices and the READ_ONLY workspace role (amends 0016) | Accepted | — |
 | [0035](ADR-0035-dashboard-ui-and-read-models.md) | Dashboard UI, read-only data endpoints and the admin shell | Accepted | — |
+| [0036](ADR-0036-project-scoped-navigation.md) | Project-scoped navigation and dashboard (Explee-style) | Accepted | — |

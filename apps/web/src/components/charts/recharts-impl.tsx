@@ -9,6 +9,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -116,6 +118,62 @@ export function BarChartImpl({
           maxBarSize={48}
         />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+const WEEKDAY = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' });
+
+/** Weekday names for a week of points, otherwise month/day. */
+function dayTick(points: number) {
+  return (d: string) => (points <= 8 ? WEEKDAY.format(new Date(`${d}T00:00:00Z`)) : shortDate(d));
+}
+
+/** Small single-series line chart for dashboard performance cards (ADR-0036). */
+export function MiniLineChartImpl({
+  data,
+  name,
+  color = 'var(--chart-1)',
+}: {
+  data: { date: string; value: number }[];
+  name: string;
+  color?: string;
+}) {
+  const dots = data.length <= 14;
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 4" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={dayTick(data.length)}
+          tick={tick}
+          tickLine={false}
+          axisLine={false}
+          minTickGap={12}
+          interval="preserveStartEnd"
+        />
+        <YAxis
+          allowDecimals={false}
+          tick={tick}
+          tickLine={false}
+          axisLine={false}
+          width={36}
+          tickCount={3}
+          domain={[0, (max: number) => Math.max(1, max)]}
+        />
+        <Tooltip content={<TooltipBox />} cursor={{ stroke: 'var(--border)' }} />
+        <Line
+          animationDuration={400}
+          type="monotone"
+          dataKey="value"
+          name={name}
+          stroke={color}
+          strokeWidth={2}
+          dot={dots ? { r: 2.5, fill: color, strokeWidth: 0 } : false}
+          activeDot={{ r: 4 }}
+        />
+      </LineChart>
     </ResponsiveContainer>
   );
 }

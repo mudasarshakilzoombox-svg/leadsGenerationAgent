@@ -10,6 +10,8 @@ import {
   METRIC_KEYS,
   METRICS,
   type Overview,
+  type OverviewQuery,
+  type PerformanceMetric,
   RANGE_DAYS,
   type RangeKey,
   rate,
@@ -18,6 +20,7 @@ import {
 } from '@lga/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { resolveCampaignScope } from '../../platform/tenancy/campaign-scope.js';
 import type { WorkspaceAccess } from '../../tenancy/workspace-access.service.js';
 
 const DAY_MS = 86_400_000;
@@ -135,10 +138,10 @@ export class InsightsQueries {
     return { byTier, total };
   }
 
-  private async kpis(access: WorkspaceAccess, w: RangeWindow) {
+  private async kpis(access: WorkspaceAccess, w: RangeWindow, scope: EventWhere = {}) {
     const [current, previous, leadsNow, leadsBefore] = await Promise.all([
-      this.eventCounts(access, { occurredAt: { gte: w.from, lt: w.to } }),
-      this.eventCounts(access, { occurredAt: { gte: w.previousFrom, lt: w.from } }),
+      this.eventCounts(access, { ...scope, occurredAt: { gte: w.from, lt: w.to } }),
+      this.eventCounts(access, { ...scope, occurredAt: { gte: w.previousFrom, lt: w.from } }),
       this.newLeadsByTier(access, w.from, w.to),
       this.newLeadsByTier(access, w.previousFrom, w.from),
     ]);
@@ -176,13 +179,142 @@ export class InsightsQueries {
     return [...points.values()];
   }
 
+  /**
+   * Dashboard performance cards (ADR-0036): totals, previous period, change and a daily series.
+   * Sent and Delivered count events; Hot leads counts distinct contacts with a positive reply;
+   * Credits used sums settled ledger rows (workspace-wide: the ledger has no campaign link).
+   */
+  private async performance(
+    access: WorkspaceAccess,
+    w: RangeWindow,
+    timezone: string,
+    scope: EventWhere,
+    filtered: boolean,
+  ): Promise<PerformanceMetric[]> {
+    const [events, ledger] = await Promise.all([
+      access.db.messageEvent.findMany({
+        where: {
+          ...scope,
+          occurredAt: { gte: w.previousFrom, lt: w.to },
+          type: { in: ['SENT', 'BOUNCED', 'POSITIVE_REPLY'] },
+        },
+        select: { id: true, type: true, occurredAt: true, contactId: true, recipientId: true },
+      }),
+      access.db.usageLedger.findMany({
+        where: {
+          metric: 'CREDITS',
+          status: 'SETTLED',
+          createdAt: { gte: w.previousFrom, lt: w.to },
+        },
+        select: { quantity: true, createdAt: true },
+      }),
+    ]);
+
+    const days = daysBetween(w.from, w.to, timezone);
+    const zeroes = () => new Map(days.map((d) => [d, 0]));
+    const bump = (map: Map<string, number>, day: string, by = 1) => {
+      if (map.has(day)) map.set(day, (map.get(day) ?? 0) + by);
+    };
+    const period = () => ({ sent: 0, bounced: 0, credits: 0, hot: new Set<string>() });
+    const now = period();
+    const before = period();
+    const daily = { sent: zeroes(), bounced: zeroes(), credits: zeroes() };
+    const dailyHot = new Map(days.map((d) => [d, new Set<string>()]));
+
+    for (const e of events) {
+      const current = e.occurredAt >= w.from;
+      const bucket = current ? now : before;
+      const day = dayKey(e.occurredAt, timezone);
+      if (e.type === 'SENT') {
+        bucket.sent += 1;
+        if (current) bump(daily.sent, day);
+      } else if (e.type === 'BOUNCED') {
+        bucket.bounced += 1;
+        if (current) bump(daily.bounced, day);
+      } else {
+        const who = e.contactId ?? e.recipientId ?? e.id;
+        bucket.hot.add(who);
+        if (current) dailyHot.get(day)?.add(who);
+      }
+    }
+    for (const row of ledger) {
+      const credits = Number(row.quantity) / 1000;
+      const current = row.createdAt >= w.from;
+      (current ? now : before).credits += credits;
+      if (current) bump(daily.credits, dayKey(row.createdAt, timezone), credits);
+    }
+
+    // No sends means nothing could be delivered: show "no data", not 0.
+    const delivered = (p: ReturnType<typeof period>) => (p.sent > 0 ? p.sent - p.bounced : null);
+    const round = (n: number) => Math.round(n * 1000) / 1000;
+    const metric = (
+      key: PerformanceMetric['key'],
+      label: string,
+      value: number | null,
+      previous: number | null,
+      series: Array<{ date: string; value: number }>,
+      extra: Partial<PerformanceMetric> = {},
+    ): PerformanceMetric => ({
+      key,
+      label,
+      format: 'count',
+      higherIsBetter: true,
+      scope: 'filtered',
+      value,
+      previous,
+      change: relativeChange(value, previous),
+      series,
+      ...extra,
+    });
+    return [
+      metric(
+        'sent',
+        'Sent',
+        now.sent,
+        before.sent,
+        days.map((d) => ({ date: d, value: daily.sent.get(d) ?? 0 })),
+      ),
+      metric(
+        'delivered',
+        'Delivered',
+        delivered(now),
+        delivered(before),
+        days.map((d) => ({
+          date: d,
+          value: Math.max(0, (daily.sent.get(d) ?? 0) - (daily.bounced.get(d) ?? 0)),
+        })),
+      ),
+      metric(
+        'hotLeads',
+        'Hot leads',
+        now.hot.size,
+        before.hot.size,
+        days.map((d) => ({ date: d, value: dailyHot.get(d)?.size ?? 0 })),
+      ),
+      metric(
+        'creditsUsed',
+        'Credits used',
+        round(now.credits),
+        round(before.credits),
+        days.map((d) => ({ date: d, value: round(daily.credits.get(d) ?? 0) })),
+        // The ledger has no campaign link, so a filtered dashboard still shows workspace spend.
+        { format: 'credits', higherIsBetter: false, scope: filtered ? 'workspace' : 'filtered' },
+      ),
+    ];
+  }
+
   async overview(
     access: WorkspaceAccess,
-    range: RangeKey,
+    query: OverviewQuery,
     user: { emailVerified: boolean },
   ): Promise<Overview> {
+    const { range } = query;
     const w = rangeWindow(range);
-    const timezone = await this.workspaceTimezone(access.workspaceId);
+    const [timezone, campaignIds] = await Promise.all([
+      this.workspaceTimezone(access.workspaceId),
+      resolveCampaignScope(access, query),
+    ]);
+    const scope: EventWhere = campaignIds ? { campaignId: { in: campaignIds } } : {};
     const db = access.db;
     const [
       { kpis, newLeadsByTier },
@@ -198,8 +330,8 @@ export class InsightsQueries {
       verifiedDomains,
       launched,
     ] = await Promise.all([
-      this.kpis(access, w),
-      this.series(access, w, timezone),
+      this.kpis(access, w, scope),
+      this.series(access, w, timezone, scope),
       db.conversation.count({ where: { isUnread: true } }),
       db.messageDraft.count({ where: { status: 'NEEDS_REVIEW' } }),
       db.campaignApproval.count({ where: { status: 'PENDING' } }),
@@ -224,6 +356,9 @@ export class InsightsQueries {
       newLeadsByTier,
       series,
       attention: { unreadReplies, draftsToReview, pendingApprovals, mailboxIssues },
+      projectId: query.project ?? null,
+      campaignId: query.campaign ?? null,
+      performance: await this.performance(access, w, timezone, scope, campaignIds !== null),
       // WS-08 onboarding checklist, derived from real records.
       checklist: [
         {

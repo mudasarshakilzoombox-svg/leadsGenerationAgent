@@ -2,6 +2,8 @@
 
 
 > **Implemented (2026-11-27, ADR-0035):** app shell, auth pages, 13 workspace sections (flat routes matching the sidebar), the admin shell and shared state, data, form and chart components. shadcn primitives live in `packages/ui`; composites in `apps/web/src/components`. `next-intl` and TanStack Table are deferred.
+>
+> **Navigation (2026-11-27, ADR-0036):** project-scoped, Explee-style shell. A project switcher (business profile, `lga_project_<workspaceId>` cookie), the project's campaigns in the sidebar, Leads / Mailbox (Inbox, Sent, Meetings) / Setup (Project docs, Channels, Email sequences) groups, a collapsible icon rail, a project dashboard with Performance cards and a floating "Get started" checklist. Routes are unchanged except the new `/sent` and `/sequences`.
 > Status: Draft for review · Related: [ADR-0003](adr/ADR-0003-nextjs-presentation-layer.md), [ADR-0028](adr/ADR-0028-polling-first-realtime.md), PRD §9–10
 
 ## 1. Goals and constraints

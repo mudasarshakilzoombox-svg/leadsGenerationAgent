@@ -7,12 +7,19 @@ import type {
   ConversationItem,
   ListQuery,
   MeetingItem,
+  Projects,
+  SentItem,
+  Sequences,
 } from '@lga/contracts';
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { ApiEnv } from '../../config/env.js';
 import { DomainError } from '../../errors/domain-error.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { afterDesc, decodeCursor, pageOf } from '../../platform/pagination/cursor.js';
+import {
+  type CampaignScopeFilter,
+  resolveCampaignScope,
+} from '../../platform/tenancy/campaign-scope.js';
 import type { WorkspaceAccess } from '../../tenancy/workspace-access.service.js';
 import type { PageResult } from '../prospects/prospects.queries.js';
 
@@ -116,15 +123,131 @@ export class OutreachQueries {
     };
   }
 
+  /** Projects (business profiles) with their campaigns, for the app sidebar (ADR-0036). */
+  async projects(access: WorkspaceAccess): Promise<Projects> {
+    const unread = access.db.conversation.count({ where: { isUnread: true } });
+    const rows = await access.db.businessProfile.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: 100,
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        status: true,
+        campaigns: {
+          where: { deletedAt: null },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 50,
+          select: { id: true, name: true, status: true },
+        },
+      },
+    });
+    return { data: rows, unreadReplies: await unread };
+  }
+
+  /** Sent outreach emails, newest first, optionally narrowed to a project or campaign. */
+  async sent(
+    access: WorkspaceAccess,
+    query: ListQuery & CampaignScopeFilter,
+  ): Promise<PageResult<SentItem>> {
+    const campaignIds = await resolveCampaignScope(access, query);
+    const position = decodeCursor(query.cursor, this.env.SESSION_PEPPER);
+    const rows = await access.db.message.findMany({
+      where: {
+        AND: [
+          { direction: 'OUTBOUND', status: 'SENT' },
+          afterDesc('createdAt', position),
+          campaignIds ? { step: { campaignId: { in: campaignIds } } } : {},
+          query.q
+            ? {
+                OR: [
+                  { subject: { contains: query.q, mode: 'insensitive' } },
+                  { contact: { fullName: { contains: query.q, mode: 'insensitive' } } },
+                ],
+              }
+            : {},
+        ],
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      select: {
+        id: true,
+        conversationId: true,
+        subject: true,
+        toEmails: true,
+        sentAt: true,
+        createdAt: true,
+        contact: { select: { id: true, fullName: true, email: true } },
+        inboxConnection: { select: { id: true, emailAddress: true } },
+        step: {
+          select: { stepOrder: true, campaign: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    const page = pageOf(rows, query.limit, (r) => r.createdAt, this.env.SESSION_PEPPER);
+    return {
+      data: page.rows.map((m) => ({
+        id: m.id,
+        conversationId: m.conversationId,
+        subject: m.subject,
+        toEmails: m.toEmails,
+        contact: m.contact,
+        campaign: m.step?.campaign ?? null,
+        stepOrder: m.step?.stepOrder ?? null,
+        mailbox: m.inboxConnection,
+        sentAt: (m.sentAt ?? m.createdAt).toISOString(),
+      })),
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  /** Each campaign's step plan for a project. Subjects only: bodies stay out of this read model. */
+  async sequences(
+    access: WorkspaceAccess,
+    filter: { project?: string | undefined },
+  ): Promise<Sequences> {
+    await resolveCampaignScope(access, filter);
+    const campaigns = await access.db.campaign.findMany({
+      where: { deletedAt: null, ...(filter.project ? { businessProfileId: filter.project } : {}) },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        steps: {
+          orderBy: { stepOrder: 'asc' },
+          select: {
+            id: true,
+            stepOrder: true,
+            type: true,
+            delayDays: true,
+            intent: true,
+            subjectTemplate: true,
+          },
+        },
+      },
+    });
+    return {
+      data: campaigns.map(({ steps, ...campaign }) => ({
+        campaign,
+        steps: steps.map(({ subjectTemplate, ...step }) => ({ ...step, subject: subjectTemplate })),
+      })),
+    };
+  }
+
   async campaigns(
     access: WorkspaceAccess,
-    query: ListQuery & { status?: string | undefined },
+    query: ListQuery & { status?: string | undefined; project?: string | undefined },
   ): Promise<PageResult<CampaignItem>> {
+    if (query.project) await resolveCampaignScope(access, { project: query.project });
     const position = decodeCursor(query.cursor, this.env.SESSION_PEPPER);
     const rows = await access.db.campaign.findMany({
       where: {
         AND: [
           { deletedAt: null },
+          query.project ? { businessProfileId: query.project } : {},
           afterDesc('createdAt', position),
           query.status ? { status: query.status as CampaignRow['status'] } : {},
           query.q ? { name: { contains: query.q, mode: 'insensitive' } } : {},

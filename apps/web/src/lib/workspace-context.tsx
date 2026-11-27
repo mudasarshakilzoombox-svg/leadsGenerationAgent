@@ -1,12 +1,17 @@
 'use client';
 
-import type { MembershipSummary, UserSummary } from '@lga/contracts';
+import type { MembershipSummary, Project, UserSummary } from '@lga/contracts';
 import { createContext, type ReactNode, use } from 'react';
 
 interface WorkspaceContextValue {
   user: UserSummary;
   membership: MembershipSummary;
   memberships: MembershipSummary[];
+  /** Projects (business profiles) in this workspace and the selected one (ADR-0036). */
+  projects: Project[];
+  project: Project | null;
+  /** Unread inbox threads (workspace-wide), for the sidebar badge. */
+  unreadReplies: number;
   /** API base for this workspace: `/workspaces/<id>`. */
   base: string;
   /** Link base: `/<slug>`. */
@@ -19,6 +24,9 @@ export function WorkspaceProvider({
   user,
   membership,
   memberships,
+  projects,
+  project,
+  unreadReplies,
   children,
 }: Omit<WorkspaceContextValue, 'base' | 'href'> & { children: ReactNode }) {
   const slug = membership.workspace.slug;
@@ -26,6 +34,9 @@ export function WorkspaceProvider({
     user,
     membership,
     memberships,
+    projects,
+    project,
+    unreadReplies,
     base: `/workspaces/${membership.workspace.id}`,
     href: (path = '') => (path ? `/${slug}/${path.replace(/^\//, '')}` : `/${slug}`),
   };

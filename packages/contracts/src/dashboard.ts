@@ -61,6 +61,34 @@ export const CAMPAIGN_STATUSES = [
 
 export const RangeQuerySchema = z.object({ range: RangeKeySchema });
 
+/**
+ * Dashboard filters (ADR-0036). `project` is a business profile id and `campaign` a campaign id;
+ * the API re-checks both inside the tenant and answers 404 for anything else.
+ */
+export const OverviewQuerySchema = RangeQuerySchema.extend({
+  project: id.optional(),
+  campaign: id.optional(),
+});
+export type OverviewQuery = z.infer<typeof OverviewQuerySchema>;
+
+export const PERFORMANCE_KEYS = ['sent', 'delivered', 'hotLeads', 'creditsUsed'] as const;
+export type PerformanceKey = (typeof PERFORMANCE_KEYS)[number];
+
+/** One dashboard performance card: total, previous period, change and a daily series. */
+export const PerformanceMetricSchema = z.object({
+  key: z.enum(PERFORMANCE_KEYS),
+  label: z.string(),
+  format: z.enum(['count', 'credits']),
+  higherIsBetter: z.boolean(),
+  /** `workspace` when the metric cannot be narrowed to the selected project or campaign. */
+  scope: z.enum(['filtered', 'workspace']),
+  value: z.number().nullable(),
+  previous: z.number().nullable(),
+  change: z.number().nullable(),
+  series: z.array(z.object({ date: day, value: z.number() })),
+});
+export type PerformanceMetric = z.infer<typeof PerformanceMetricSchema>;
+
 export const KpiSchema = z.object({
   key: z.enum(METRIC_KEYS),
   label: z.string(),
@@ -101,8 +129,32 @@ export const OverviewSchema = z.object({
   checklist: z.array(
     z.object({ key: z.string(), label: z.string(), done: z.boolean(), href: z.string() }),
   ),
+  /** Applied filters, echoed back (null = all). */
+  projectId: id.nullable(),
+  campaignId: id.nullable(),
+  performance: z.array(PerformanceMetricSchema),
 });
 export type Overview = z.infer<typeof OverviewSchema>;
+
+// ------------------------------------------------------------------------------ projects
+
+/** A project is a business profile (one website) with its campaigns (ADR-0036). */
+export const ProjectSchema = z.object({
+  id,
+  name: z.string(),
+  domain: z.string(),
+  status: z.string(),
+  campaigns: z.array(z.object({ id, name: z.string(), status: z.enum(CAMPAIGN_STATUSES) })),
+});
+export type Project = z.infer<typeof ProjectSchema>;
+export const ProjectsSchema = z.object({
+  data: z.array(ProjectSchema),
+  /** Workspace-wide unread inbox threads, for the sidebar badge. */
+  unreadReplies: z.number().int(),
+});
+export type Projects = z.infer<typeof ProjectsSchema>;
+
+export const ProjectFilterSchema = z.object({ project: id.optional() });
 
 export const CampaignStatsSchema = z.object({
   id,
@@ -289,6 +341,7 @@ export type IcpOverview = z.infer<typeof IcpOverviewSchema>;
 
 export const CampaignQuerySchema = ListQuerySchema.extend({
   status: z.enum(CAMPAIGN_STATUSES).optional(),
+  project: id.optional(),
 });
 export const CampaignItemSchema = z.object({
   id,
@@ -362,6 +415,43 @@ export const ConversationDetailSchema = ConversationItemSchema.extend({
     .nullable(),
 });
 export type ConversationDetail = z.infer<typeof ConversationDetailSchema>;
+
+export const SentQuerySchema = ListQuerySchema.extend({
+  project: id.optional(),
+  campaign: id.optional(),
+});
+export const SentItemSchema = z.object({
+  id,
+  conversationId: id,
+  subject: z.string().nullable(),
+  toEmails: z.array(z.string()),
+  contact: ContactRefSchema.nullable(),
+  campaign: z.object({ id, name: z.string() }).nullable(),
+  stepOrder: z.number().int().nullable(),
+  mailbox: z.object({ id, emailAddress: z.string() }),
+  sentAt: iso,
+});
+export type SentItem = z.infer<typeof SentItemSchema>;
+
+/** Email sequences of a project's campaigns. Step bodies are not part of this read model. */
+export const SequencesSchema = z.object({
+  data: z.array(
+    z.object({
+      campaign: z.object({ id, name: z.string(), status: z.enum(CAMPAIGN_STATUSES) }),
+      steps: z.array(
+        z.object({
+          id,
+          stepOrder: z.number().int(),
+          type: z.string(),
+          delayDays: z.number().int(),
+          intent: z.string(),
+          subject: z.string().nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+export type Sequences = z.infer<typeof SequencesSchema>;
 
 export const MeetingQuerySchema = z.object({
   when: z.enum(['upcoming', 'past']).default('upcoming'),

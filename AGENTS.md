@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (13 sections, auth pages, admin shell) shows real read-only data (ADR-0035). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). Next in Phase 0: the AI gateway, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Authentication (signup, verification, login, sessions, reset), workspace creation, invitations, team management and RBAC are implemented in the API (ADR-0034). The web dashboard (auth pages, admin shell, real read-only data, ADR-0035) uses a project-scoped, Explee-style shell: project switcher, campaigns in the sidebar, Performance dashboard, Sent and Email sequences pages (ADR-0036). Security utilities are in place in `packages/core/src/security/`: `SafeFetch` (SSRF), `FieldCrypto` (AES-256-GCM key rings) and `SignedTokens`/`UnsubscribeTokens` (HMAC). Next in Phase 0: the AI gateway, OAuth sign-in, profile, workspace settings and deletion (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -107,7 +107,7 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 - Check suppression at import, enrollment **and immediately before every send**.
 - Every outreach email has a `List-Unsubscribe` + `List-Unsubscribe-Post` header, a footer with the workspace's physical address, an unsubscribe link and a privacy-notice link.
 - Respect caps, spacing, send windows, ramp-up and the recipient-country policy. Do not add bypasses.
-- Never implement LinkedIn scraping or automation, SMTP RCPT mailbox probing, or collection of personal (non-business) contact data.
+- Never implement LinkedIn scraping or automation, SMTP RCPT mailbox probing, or collection of personal (non-business) contact data. LinkedIn is supported only compliantly (owner decision 2026-11-27, ADR-0036): profile URLs from licensed data providers, AI-drafted LinkedIn messages, and manual LinkedIn task steps the user performs from their own account.
 
 ## Database rules
 
