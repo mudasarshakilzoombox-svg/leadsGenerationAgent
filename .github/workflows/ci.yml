@@ -54,7 +54,7 @@ jobs:
       EMAIL_HASH_PEPPER: ci-only-email-pepper-not-a-secret-00001
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
 
@@ -104,7 +104,7 @@ jobs:
           - { name: worker, file: infra/docker/backend.Dockerfile, target: runtime, app: worker }
           - { name: migrate, file: infra/docker/backend.Dockerfile, target: migrate, app: api }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
