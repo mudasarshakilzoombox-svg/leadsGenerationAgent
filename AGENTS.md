@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, etc.) an
 
 ## Project status
 
-**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Next in Phase 0: identity, tenancy and RBAC (`docs/ROADMAP.md`).
+**Phase 0 (Foundations) in progress.** The monorepo foundation is in place: apps, packages, config, logging, errors, health, Docker, nginx, CI. Database schema v1 with tenant isolation, migrations and dev seed is in place (ADR-0033). Next in Phase 0: identity, tenancy and RBAC (`docs/ROADMAP.md`).
 - Work strictly phase by phase (`docs/ROADMAP.md`). Do not pull later-phase features forward without being asked.
 - Run `pnpm check` and `pnpm test:integration` before declaring work done.
 
@@ -57,9 +57,10 @@ All packages are ESM: relative imports in Node packages end in `.js`. Workspace 
 pnpm install && pnpm setup   # deps + local .env with random passwords
 pnpm infra:up                # postgres, valkey, mailpit (docker compose)
 pnpm db:deploy               # apply migrations (owner role)
+pnpm db:seed                 # plan/role catalogs + idempotent dev data (2 workspaces)
 pnpm dev                     # web + api + worker with live reload (SWC)
 pnpm check                   # format check + lint + typecheck + unit tests
-pnpm test:integration        # api + worker against real Postgres + Valkey
+pnpm test:integration        # core (tenancy, constraints, seed) + api + worker against real Postgres + Valkey
 pnpm smoke                   # end-to-end checks against running dev servers
 pnpm db:migrate              # create a migration (prisma migrate dev) in packages/core
 pnpm stack:build && pnpm stack:up && pnpm stack:smoke   # production-like Docker stack
@@ -84,6 +85,8 @@ Custom BullMQ job ids must not contain `:`. Build them with `jobId(...)` from `@
 ## Multi-tenancy and security rules
 
 - Every tenant table has `workspace_id`. Every query is tenant-scoped. Look up by `{ id, workspaceId }`, never by `id` alone.
+- Access tenant data through the client from `WorkspaceAccessService.forUser()` (`createTenantClient`), never the base `PrismaService`, outside an audited system context. Every new model must be classified in `MODEL_SCOPES` (`packages/core/src/tenancy/tenant-models.ts`). Tenant-to-tenant relations are composite `(workspaceId, xId)` foreign keys with an explicit `onDelete` (never SetNull) (ADR-0033).
+- Plans and roles are code catalogs (`platform/billing/plans.ts`, `platform/tenancy/permissions.ts`) synced into the `plans`/`roles` tables by the migrate container. Change the code, not the rows.
 - Tenant routes live under `/api/v1/workspaces/:workspaceId/...` behind `TenantGuard`. Check **permissions** (`@RequirePermission('campaign.launch')`), not role names. The permission matrix is SECURITY.md §3.2.
 - Respect the launch-approval setting (`launchRequiresApproval`, default ON). Never add a path that lets a Member's campaign send without approval when it is ON.
 - Every credit-consuming action must **reserve → settle/release** through the `billing` module and carry an idempotency key. Never decrement balances directly. Never block essential operations (reply sync, classification, unsubscribe, bounce processing) for lack of credits.

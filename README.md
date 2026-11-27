@@ -21,6 +21,7 @@ pnpm install
 pnpm setup            # creates .env with random local-only passwords (never committed)
 pnpm infra:up         # PostgreSQL 18, Valkey 8, Mailpit (local ports only)
 pnpm db:deploy        # apply migrations as the schema owner
+pnpm db:seed          # plan/role catalogs + sample data (Acme Growth Agency, Northwind Startup)
 pnpm dev              # web, api and worker with live reload
 pnpm smoke            # end-to-end checks against the running dev stack
 ```
@@ -63,11 +64,12 @@ docs/         product, architecture, ADRs
 | `pnpm build` | Type-checked production builds (`tsc`, `next build`) |
 | `pnpm lint` / `pnpm typecheck` | ESLint (type-aware) / TypeScript, all packages |
 | `pnpm test` | Unit tests (no infrastructure needed) |
-| `pnpm test:integration` | API and worker against real PostgreSQL + Valkey (`pnpm infra:up` first) |
+| `pnpm test:integration` | Core (tenant isolation, constraints, seed), API and worker against real PostgreSQL + Valkey (`pnpm infra:up` and `pnpm db:deploy` first) |
 | `pnpm check` | format check + lint + typecheck + unit tests |
 | `pnpm format` | Prettier |
 | `pnpm db:migrate` | Create/apply a migration in development (`prisma migrate dev`) |
 | `pnpm db:deploy` / `pnpm db:status` | Apply pending migrations / show status |
+| `pnpm db:seed` | Sync plan/role catalogs and load idempotent development data (refused when `APP_ENV=production`; `--catalogs-only` is what deploys run) |
 | `pnpm infra:up` / `infra:down` | Start/stop local services (data is kept) |
 | `pnpm stack:build` / `stack:up` / `stack:smoke` / `stack:down` | Full production-like Docker stack behind nginx on http://localhost:8080 |
 

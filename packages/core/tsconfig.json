@@ -6,5 +6,5 @@
     "noEmit": true,
     "customConditions": ["@lga/source"]
   },
-  "include": ["src", "prisma.config.ts", "vitest.config.ts"]
+  "include": ["src", "test", "prisma.config.ts", "vitest.config.ts", "vitest.integration.config.ts"]
 }

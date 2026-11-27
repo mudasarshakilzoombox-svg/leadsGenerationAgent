@@ -3,6 +3,29 @@
 > Status: **Proposed. Awaiting approval.** Synced with PRD v2.0 on 2026-11-26 (workspaces, three roles, launch approvals, credit ledger).
 > Engine: **PostgreSQL 18** (17 acceptable). ORM: **Prisma 7** with the `pg` driver adapter (schema and migrations in `packages/core/prisma/`, client generated into `packages/core/src/generated/`). Split into multiple schema files as domains grow.
 > Related: [ARCHITECTURE.md](ARCHITECTURE.md) §6 (table ownership per module) · [SECURITY.md](SECURITY.md) (encryption, retention, erasure)
+>
+> **Implementation status (2026-11-26): schema v1 is implemented.** [`packages/core/prisma/schema.prisma`](../packages/core/prisma/schema.prisma) is now authoritative for table and column names. [ADR-0033](architecture/adr/ADR-0033-schema-v1-entities.md) records how it differs from this document:
+> - Renamed tables (below).
+> - `plans` and `roles` catalog tables synced from code.
+> - `background_jobs`.
+> - `data_sources` + `field_provenance` instead of `data_provenance`.
+> - NO ACTION instead of RESTRICT and SET NULL on tenant references.
+>
+> The table specifications in §5 still describe columns and intent.
+>
+> | Implemented | Design name in this document |
+> |-------------|------------------------------|
+> | `workspace_members` | `memberships` |
+> | `verification_tokens`, `password_resets` | `user_tokens` |
+> | `usage_ledger` | `usage_records` |
+> | `website_analyses` | `analysis_runs` |
+> | `target_segments` | `icp_personas` |
+> | `campaign_recipients` | `campaign_enrollments` |
+> | `conversations` / `messages` / `message_events` | `email_threads` / `email_messages` / `email_events` |
+> | `inbox_connections` | `mailboxes` |
+> | `provider_connections` | `integration_connections` |
+> | `import_batches` | `imports` |
+> | `data_sources` + `field_provenance` | `data_provenance` |
 
 ---
 

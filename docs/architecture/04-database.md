@@ -43,6 +43,12 @@ flowchart LR
     system --> sysuse["Schedulers, reconcilers,<br/>webhook resolution, DSAR matching,<br/>platform admin, purge jobs"]
 ```
 
+> **As implemented (ADR-0033):**
+> - The schema is a single file, `packages/core/prisma/schema.prisma`, for now.
+> - Scopes come from `MODEL_SCOPES` in `packages/core/src/tenancy/tenant-models.ts`. It is typed exhaustive over `Prisma.ModelName` and checked against the schema by a unit test, so no `/// @tenant` generator is needed.
+> - `createTenantClient(prisma, workspaceId)` takes the workspace explicitly. Application code obtains it from `WorkspaceAccessService.forUser(userId, workspaceId)` after the membership check.
+> - Unique operations get `workspaceId` added to their selector (Prisma extended where-unique), instead of being rejected when the selector is not compound.
+
 - Use the latest Prisma major at scaffolding with the PostgreSQL driver adapter if that version requires one. Multi-file schema lives in `prisma/schema/*.prisma`.
 - Tenant models are marked with a schema doc comment `/// @tenant`. A generator step emits `TENANT_MODELS` (a `Set<ModelName>`) used by the extension, so a new table can't be forgotten.
 - **Tenancy extension algorithm** (`common/db/tenancy.extension.ts`), for each operation on a model in `TENANT_MODELS`:

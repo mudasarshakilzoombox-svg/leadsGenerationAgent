@@ -36,3 +36,4 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0030](ADR-0030-csv-only-uploads.md) | CSV-only uploads, streamed to private storage | Proposed | — |
 | [0031](ADR-0031-prompt-registry-and-evals.md) | Prompts versioned in code with eval gates | Proposed | — |
 | [0032](ADR-0032-repository-layout-apps-and-core.md) | Separate api and worker apps with a backend core package (amends 0001/0002 layout) | Accepted | — |
+| [0033](ADR-0033-schema-v1-entities.md) | Schema v1 entities, code-synced catalog tables, tenant-safe delete policies | Accepted | — |

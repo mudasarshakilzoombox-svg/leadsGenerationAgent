@@ -25,6 +25,7 @@
     "db:migrate": "pnpm --filter @lga/core db:migrate",
     "db:deploy": "pnpm --filter @lga/core db:deploy",
     "db:status": "pnpm --filter @lga/core db:status",
+    "db:seed": "turbo run build --filter=@lga/core && pnpm --filter @lga/core db:seed",
     "smoke": "node infra/scripts/smoke.mjs",
     "stack:build": "node infra/scripts/build-images.mjs",
     "stack:up": "docker compose --env-file .env -f infra/docker/compose.prod.yml up -d --wait",

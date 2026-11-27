@@ -31,7 +31,8 @@ RUN pnpm --filter=@lga/${APP} deploy --prod --legacy /out
 # One-off migration runner (schema owner credentials, never started by default).
 FROM builder AS migrate
 WORKDIR /repo/packages/core
-CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
+# Apply migrations, then sync the code-managed plan and role catalogs (ADR-0033).
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/seed/run-seed.js --catalogs-only"]
 
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production
