@@ -66,3 +66,33 @@ describe('format', () => {
     expect(initials('Jane van Doe')).toBe('JV');
   });
 });
+
+import { sentryIngestOrigin, sentryOptions } from './observability/sentry-options';
+
+describe('Sentry options (ADR-0040)', () => {
+  it('adds only the DSN origin to the CSP, and nothing when unset or malformed', () => {
+    expect(sentryIngestOrigin('https://key@o12.ingest.sentry.io/345')).toBe(
+      'https://o12.ingest.sentry.io',
+    );
+    expect(sentryIngestOrigin(undefined)).toBe('');
+    expect(sentryIngestOrigin('not a url')).toBe('');
+  });
+
+  it('scrubs events and never collects personal data', () => {
+    const options = sentryOptions({
+      dsn: 'https://k@o1.ingest.sentry.io/1',
+      release: 'r',
+      environment: 'test',
+    });
+    expect(options.dataCollection).toMatchObject({
+      userInfo: false,
+      cookies: false,
+      httpBodies: [],
+    });
+    expect(
+      options.beforeSend({ message: 'failed for a.b@example.com', user: { email: 'x@y.z' } }),
+    ).toEqual({
+      message: 'failed for [EMAIL]',
+    });
+  });
+});

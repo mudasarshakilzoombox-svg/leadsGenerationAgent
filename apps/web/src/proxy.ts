@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { sentryIngestOrigin } from '@/lib/observability/sentry-options';
 
 /**
  * Next.js 16 proxy (formerly middleware): per-request CSP nonce and request id
@@ -9,6 +10,8 @@ export function proxy(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production';
   // Cloudflare Turnstile widget (signup/login) only when a site key is configured.
   const turnstile = process.env.TURNSTILE_SITE_KEY ? ' https://challenges.cloudflare.com' : '';
+  // Browser error reports go to the Sentry ingest host only when a DSN is configured.
+  const sentry = sentryIngestOrigin(process.env.SENTRY_DSN);
 
   const csp = [
     `default-src 'self'`,
@@ -16,7 +19,7 @@ export function proxy(request: NextRequest) {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
-    `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
+    `connect-src 'self'${sentry ? ` ${sentry}` : ''}${isDev ? ' ws: wss:' : ''}`,
     `frame-src 'self'${turnstile}`,
     `frame-ancestors 'none'`,
     `form-action 'self'`,

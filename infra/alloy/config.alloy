@@ -1,0 +1,107 @@
+// Grafana Alloy (12-observability §1, ADR-0026, ADR-0040): one agent ships the stack's container
+// logs to Grafana Cloud Loki and a few host metrics (disk, memory, swap, CPU) to Grafana Cloud
+// Prometheus. Labels are low-cardinality only: never workspace, user, email or URL.
+// Credentials come from the environment (production.env), never from this file.
+
+// ---- Logs ---------------------------------------------------------------------------------
+
+// Containers of the production compose project, via the read-only docker-proxy.
+discovery.docker "stack" {
+	host             = sys.env("DOCKER_HOST")
+	refresh_interval = "30s"
+
+	filter {
+		name   = "label"
+		values = ["com.docker.compose.project=lga"]
+	}
+}
+
+discovery.relabel "stack" {
+	targets = discovery.docker.stack.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "container"
+	}
+}
+
+loki.source.docker "stack" {
+	host          = sys.env("DOCKER_HOST")
+	targets       = discovery.relabel.stack.output
+	relabel_rules = discovery.relabel.stack.rules
+	forward_to    = [loki.process.json.receiver]
+}
+
+// pino / backup JSON lines: promote level, service and event to labels (12 §2.1). `event` names
+// are a fixed vocabulary (e.g. backup.succeeded), so cardinality stays bounded.
+loki.process "json" {
+	stage.json {
+		expressions = {
+			level   = "level",
+			service = "service",
+			event   = "event",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level   = "",
+			service = "",
+			event   = "",
+		}
+	}
+
+	stage.static_labels {
+		values = {
+			env = sys.env("APP_ENV"),
+		}
+	}
+
+	forward_to = [loki.write.cloud.receiver]
+}
+
+loki.write "cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_LOKI_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_LOKI_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+}
+
+// ---- Host metrics ---------------------------------------------------------------------------
+
+prometheus.exporter.unix "host" {
+	procfs_path    = "/host/proc"
+	sysfs_path     = "/host/sys"
+	rootfs_path    = "/host/root"
+	set_collectors = ["cpu", "diskstats", "filesystem", "loadavg", "meminfo", "netdev", "uname"]
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	scrape_interval = "60s"
+	forward_to      = [prometheus.relabel.env.receiver]
+}
+
+prometheus.relabel "env" {
+	rule {
+		target_label = "env"
+		replacement  = sys.env("APP_ENV")
+	}
+
+	forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+prometheus.remote_write "cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_PROM_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_PROM_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+}

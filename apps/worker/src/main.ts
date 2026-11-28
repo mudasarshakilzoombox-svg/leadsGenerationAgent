@@ -1,12 +1,13 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { loadWorkerEnv } from '@lga/core';
+import { flushSentry, initSentry, loadWorkerEnv } from '@lga/core';
 import { EnvValidationError } from '@lga/shared';
 import { Logger } from 'nestjs-pino';
 import { WorkerModule } from './worker.module.js';
 
 async function bootstrap(): Promise<void> {
   const env = loadWorkerEnv(process.env);
+  initSentry('worker', env);
   const app = await NestFactory.createApplicationContext(WorkerModule.forRoot(env), {
     bufferLogs: true,
   });
@@ -24,5 +25,5 @@ bootstrap().catch((error: unknown) => {
   if (!(error instanceof EnvValidationError) && error instanceof Error && error.stack) {
     process.stderr.write(`${error.stack}\n`);
   }
-  process.exit(1);
+  void flushSentry().finally(() => process.exit(1));
 });

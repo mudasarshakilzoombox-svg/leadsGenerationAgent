@@ -5,6 +5,8 @@ import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+import { serverEnv } from '@/env';
+import { SENTRY_META } from '@/lib/observability/sentry-options';
 import { Providers } from '@/lib/providers';
 
 // Every page renders per request: the CSP nonce must be applied to Next's inline scripts,
@@ -35,6 +37,19 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
+      {serverEnv.SENTRY_DSN && (
+        <head>
+          {/* Runtime Sentry config for instrumentation-client.ts (the DSN is a public key). */}
+          <meta
+            name={SENTRY_META}
+            content={JSON.stringify({
+              dsn: serverEnv.SENTRY_DSN,
+              release: serverEnv.RELEASE,
+              environment: serverEnv.APP_ENV,
+            })}
+          />
+        </head>
+      )}
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         <a
           href="#main"

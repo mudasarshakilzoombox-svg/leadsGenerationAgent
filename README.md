@@ -101,6 +101,18 @@ docs/         product, architecture, ADRs
 - **CSRF:** state-changing API requests need the app `Origin` and `X-Requested-With: lga-web`.
 - **Database roles:** migrations run as the schema owner. The apps connect as a DML-only role.
 
+## Operations (ADR-0040)
+
+| What | Where |
+|------|-------|
+| Owner setup (VPS, DNS, TLS, GitHub environments, B2, age key, Sentry, Grafana Cloud, UptimeRobot) | `docs/OPS_SETUP.md` |
+| Release, rollback, restore, incidents | `infra/runbooks/` |
+| Release pipeline (tag `v*`: build, scan, push to GHCR, staging, approval, production) | `.github/workflows/release.yml`, `infra/scripts/deploy.sh` |
+| Server hardening | `infra/scripts/bootstrap-server.sh` (`--dry-run` to preview) |
+| Stacks | `infra/docker/compose.prod.yml` (+ `compose.vps.yml` on the server, + `compose.staging.yml` for staging) |
+| Backups and restore drill | `infra/backup/` (nightly `pg_dump`, age-encrypted, to B2 with object lock) |
+| Logs and alerts | `infra/alloy/` (Grafana Alloy, alert rules as code) |
+
 ## CI
 
 `.github/workflows/ci.yml` runs:

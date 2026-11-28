@@ -39,6 +39,15 @@
 - Lifecycle: daily kept 35 days, weekly (Sunday copy) 12 weeks, monthly (1st) 6 months. Copies are made by the provider lifecycle or a separate privileged job run from an operator machine, not from the VPS.
 - The staging database is **not** backed up (it's recreated from seeds).
 
+**As implemented (P0.6, ADR-0040):**
+- `infra/backup/backup.sh` runs in the `backup` service (`infra/docker/backup.Dockerfile`, profile
+  `ops`) at 03:00 UTC through supercronic, as a non-root user.
+- Objects are `b2:<bucket>/pg/daily/YYYY/MM/DD/lga-<ts>.dump.age`, each with a
+  `.manifest.json` next to it.
+- The DB is `POSTGRES_DB` (default `lga`, not `lga_production`).
+- Weekly and monthly copies are made by the operator (`docs/OPS_SETUP.md` step 7).
+- Valkey is not backed up (§2, confirmed in ADR-0040).
+
 ### 3.2 Continuous archiving (V1)
 
 - WAL-G in the `postgres` container: `archive_command = 'wal-g wal-push %p'`, `archive_timeout = 300` (a segment at least every 5 min, giving RPO ≤ 15 min with margin). Weekly `wal-g backup-push`. Encryption via WAL-G libsodium key, also held offline.
@@ -53,6 +62,12 @@
 | Tenant restore drill | Twice a year | §6 scenario F | Correct rows extracted for one workspace |
 
 Results are logged in `infra/runbooks/restore-log.md` and exported as the metric `restore_test_last_success_timestamp`.
+
+**As implemented (P0.6):**
+- `infra/backup/restore-drill.sh` + `verify-restore.sql` run on the operator machine with the
+  offline key (SECURITY §5.3; no GitHub secret).
+- First drill, 2026-11-28 (local rehearsal): restore 11 s, total 30 s, all checks PASS. Logged
+  in `infra/runbooks/restore-log.md`.
 
 ## 5. Erasure and backups
 

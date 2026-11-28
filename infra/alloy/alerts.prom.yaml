@@ -1,0 +1,31 @@
+# Host metric alert rules for Grafana Cloud Prometheus (12-observability §6, ADR-0040).
+# Import: Grafana Cloud > Alerting > Alert rules > "Import" (Prometheus data source), or
+#   mimirtool rules load infra/alloy/alerts.prom.yaml   (see docs/OPS_SETUP.md)
+namespace: lga
+groups:
+  - name: lga-host
+    interval: 1m
+    rules:
+      - alert: DiskAlmostFull
+        expr: |
+          1 - (node_filesystem_avail_bytes{env="production", mountpoint="/"}
+               / node_filesystem_size_bytes{env="production", mountpoint="/"}) > 0.80
+        for: 10m
+        labels: { severity: high }
+        annotations:
+          summary: Root disk is more than 80% full.
+          runbook: infra/runbooks/incident-quickref.md#disk-full
+      - alert: SwapHigh
+        expr: (node_memory_SwapTotal_bytes{env="production"} - node_memory_SwapFree_bytes{env="production"}) > 1e9
+        for: 5m
+        labels: { severity: high }
+        annotations:
+          summary: More than 1 GB of swap in use (stop the staging stack first).
+          runbook: infra/runbooks/incident-quickref.md#memory-pressure
+      - alert: HostMetricsMissing
+        expr: absent(up{env="production", job="prometheus.scrape.host"})
+        for: 15m
+        labels: { severity: high }
+        annotations:
+          summary: No host metrics for 15 minutes (agent or server down).
+          runbook: infra/runbooks/incident-quickref.md#agent-down

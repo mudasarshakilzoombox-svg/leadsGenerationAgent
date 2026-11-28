@@ -1,0 +1,65 @@
+# Staging overlay (ARCHITECTURE §17.4, ADR-0012, ADR-0040): a scaled-down copy of production on
+# the same VPS, started only during a release window and stopped after verification.
+#   docker compose -p lga-staging -f compose.prod.yml -f compose.staging.yml --env-file /opt/lga/env/staging.env
+# Separate project = separate containers, network and volumes. Server-only: nginx listens on
+# 127.0.0.1:8081 (reach it with `ssh -L 8081:127.0.0.1:8081 deploy@<vps>`). Fake integrations,
+# dev seed data, no backup or log agent (the ops profile stays off). Memory limits total < 1.5 GB.
+services:
+  nginx:
+    ports: !override
+      - '127.0.0.1:${STAGING_HTTP_PORT:-8081}:80'
+    deploy:
+      resources: { limits: { memory: 48m } }
+
+  web:
+    deploy:
+      resources: { limits: { memory: 320m } }
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+
+  api:
+    deploy:
+      resources: { limits: { memory: 320m } }
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+      DATABASE_POOL_MAX: '4'
+      INTEGRATIONS_MODE: fake
+
+  worker:
+    deploy:
+      resources: { limits: { memory: 448m } }
+    environment:
+      NODE_OPTIONS: --max-old-space-size=320
+      DATABASE_POOL_MAX: '4'
+      INTEGRATIONS_MODE: fake
+      WORKER_CONCURRENCY_FACTOR: '0.5'
+
+  # Migrations plus the development seed (refused only when APP_ENV=production).
+  migrate:
+    environment:
+      APP_ENV: staging
+    command:
+      - sh
+      - -c
+      - pnpm exec prisma migrate deploy && node dist/seed/run-seed.js
+
+  postgres:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=192MB
+      - -c
+      - max_connections=30
+    shm_size: 64m
+    deploy:
+      resources: { limits: { memory: 256m } }
+
+  valkey:
+    command:
+      - sh
+      - -c
+      - exec valkey-server --requirepass "$$VALKEY_PASSWORD" --appendonly yes --maxmemory 64mb --maxmemory-policy noeviction
+    deploy:
+      resources: { limits: { memory: 96m } }

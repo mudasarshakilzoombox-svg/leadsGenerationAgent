@@ -33,3 +33,6 @@ Thumbs.db
 playwright-report/
 test-results/
 apps/web/e2e/.auth/
+
+# Local deploy rehearsal state (infra/scripts/deploy.sh --local)
+.deploy/

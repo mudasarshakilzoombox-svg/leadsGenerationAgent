@@ -383,6 +383,8 @@ Terms of Service (including subscription, credits, refunds and trial terms), Acc
 - Be aware that **Docker bypasses ufw for published ports**. Only nginx publishes ports. Postgres and Valkey have **no** `ports:` mapping.
 - Time sync (chrony). Disk usage alerts. 4 GB swap. Log rotation (Docker `local` driver with max-size).
 
+*As implemented (P0.6, ADR-0040):* `infra/scripts/bootstrap-server.sh` (idempotent, `--dry-run`) applies this list. Docker uses the `local` log driver and `no-new-privileges`. Only nginx publishes ports, and staging binds to 127.0.0.1.
+
 ### 11.2 Containers [MVP]
 
 - Minimal base images (`node:24-*-slim` or distroless for runtime), multi-stage builds and no build tools in runtime images.

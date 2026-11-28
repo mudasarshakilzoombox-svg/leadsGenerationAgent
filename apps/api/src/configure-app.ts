@@ -1,6 +1,6 @@
 import { RequestMethod } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import type { ApiEnv } from '@lga/core';
+import { type ApiEnv, initSentry } from '@lga/core';
 import { Logger } from 'nestjs-pino';
 import { mountBullBoard } from './admin/bull-board.js';
 import { mountApiDocs } from './openapi/serve.js';
@@ -11,6 +11,9 @@ export { API_PREFIX };
 
 /** HTTP-level setup shared by main.ts and tests, so tests exercise the real pipeline. */
 export function configureApp(app: NestExpressApplication, env: ApiEnv): void {
+  // Error tracking first, so start-up failures after this point are reported (off without a DSN).
+  initSentry('api', env);
+
   app.useLogger(app.get(Logger));
   app.flushLogs();
 

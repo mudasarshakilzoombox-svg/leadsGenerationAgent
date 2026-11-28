@@ -3,6 +3,7 @@ import { PROBLEM_CONTENT_TYPE } from '@lga/contracts';
 import { stripQuery } from '@lga/shared';
 import type { Request, Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { reportError } from '../observability/sentry.js';
 import { toProblem } from './to-problem.js';
 
 /**
@@ -31,6 +32,8 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         { err: exception, code: problem.code, status: problem.status },
         'Request failed',
       );
+      // 5xx and unexpected errors only; expected 4xx DomainErrors never reach Sentry.
+      reportError(exception, { requestId, status: problem.status, code: problem.code });
     } else {
       this.logger.warn({ code: problem.code, status: problem.status }, problem.title);
     }

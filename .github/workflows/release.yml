@@ -1,0 +1,169 @@
+# Release pipeline (ARCHITECTURE §17.5, ADR-0012, ADR-0040).
+# Push a tag `vX.Y.Z` on a commit that passed CI:
+#   1. build  - build the four images, scan them with Trivy, push to GHCR as :<sha> and :<tag>
+#   2. staging - copy infra/ to the VPS, deploy to the server-only staging stack, smoke, stop it
+#   3. production - waits for a reviewer (GitHub environment `production`), then deploys;
+#      infra/scripts/deploy.sh rolls back to the previous release by itself if health fails
+# Manual rollback: run this workflow from the Actions tab with `rollback_to` set to an earlier
+# release (a commit SHA that was deployed before). Secrets live only in the GitHub environments
+# `staging` and `production` (docs/OPS_SETUP.md step 4); nothing secret is in this file.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      rollback_to:
+        description: Release (commit SHA) to redeploy to production
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR image names must be lowercase.
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/lga
+
+jobs:
+  build:
+    name: Build, scan, push images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      release: ${{ steps.meta.outputs.release }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: web, file: infra/docker/web.Dockerfile, target: runtime, app: '' }
+          - { name: api, file: infra/docker/backend.Dockerfile, target: runtime, app: api }
+          - { name: worker, file: infra/docker/backend.Dockerfile, target: runtime, app: worker }
+          - { name: migrate, file: infra/docker/backend.Dockerfile, target: migrate, app: api }
+          - { name: backup, file: infra/docker/backup.Dockerfile, target: '', app: '' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        name: Image names
+        run: |
+          prefix="$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')"
+          echo "release=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image=${prefix}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target || '' }}
+          build-args: ${{ matrix.app && format('APP={0}', matrix.app) || '' }}
+          load: true
+          push: false
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      # SECURITY §11.2: fail on CRITICAL vulnerabilities that have a fix available.
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+      - name: Push
+        run: |
+          image='${{ steps.meta.outputs.image }}'
+          docker tag "$image:${GITHUB_SHA}" "$image:${GITHUB_REF_NAME}"
+          docker push "$image:${GITHUB_SHA}"
+          docker push "$image:${GITHUB_REF_NAME}"
+
+  staging:
+    name: Deploy to staging (server-only)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH setup
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Copy deploy files
+        run: |
+          tar czf - infra/docker/*.yml infra/docker/postgres infra/nginx infra/alloy infra/scripts/deploy.sh \
+            | ssh -i ~/.ssh/id_deploy "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+                'mkdir -p /opt/lga/compose && tar xzf - -C /opt/lga/compose'
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "LGA_COMPOSE_DIR=/opt/lga/compose/infra/docker bash /opt/lga/compose/infra/scripts/deploy.sh staging ${{ needs.build.outputs.release }}"
+
+  production:
+    name: Deploy to production
+    needs: [build, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Required reviewers on this environment = the manual approval of ARCHITECTURE §17.5.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH setup
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Copy deploy files
+        run: |
+          tar czf - infra/docker/*.yml infra/docker/postgres infra/nginx infra/alloy infra/scripts/deploy.sh \
+            | ssh -i ~/.ssh/id_deploy "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+                'mkdir -p /opt/lga/compose && tar xzf - -C /opt/lga/compose'
+      - name: Deploy (auto-rollback on failure)
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "LGA_COMPOSE_DIR=/opt/lga/compose/infra/docker bash /opt/lga/compose/infra/scripts/deploy.sh production ${{ needs.build.outputs.release }}"
+
+  rollback:
+    name: Roll back production
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    # The input reaches shell only through this variable (never ${{ }} inside `run`): no injection.
+    env:
+      ROLLBACK_TO: ${{ inputs.rollback_to }}
+    steps:
+      - name: Validate input
+        run: |
+          [[ "$ROLLBACK_TO" =~ ^[0-9a-f]{7,40}$ ]] || { echo "rollback_to must be a commit SHA"; exit 1; }
+      - name: SSH setup
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Redeploy the earlier release
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "LGA_COMPOSE_DIR=/opt/lga/compose/infra/docker bash /opt/lga/compose/infra/scripts/deploy.sh production $ROLLBACK_TO"

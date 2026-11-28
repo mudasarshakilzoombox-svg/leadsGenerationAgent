@@ -11,5 +11,7 @@ export const webEnvSchema = z.object({
   RELEASE: z.string().min(1).max(64).default('dev'),
   /** Cloudflare Turnstile site key (public). Unset: forms send a dev token the fake verifier accepts. */
   TURNSTILE_SITE_KEY: z.string().min(1).optional(),
+  /** Error tracking (12-observability §4). Unset = Sentry off, and no SDK is sent to browsers. */
+  SENTRY_DSN: z.url().optional(),
 });
 export type WebEnv = z.output<typeof webEnvSchema>;

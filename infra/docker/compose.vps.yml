@@ -1,0 +1,55 @@
+# VPS overlay (ADR-0012, ADR-0040): TLS on 80/443 with Let's Encrypt, certificate renewal, and
+# images from GHCR. Used only by infra/scripts/deploy.sh on the server:
+#   docker compose -p lga -f compose.prod.yml -f compose.vps.yml --env-file /opt/lga/env/production.env
+# The env file sets IMAGE_PREFIX=ghcr.io/<owner>/lga, LGA_APP_DOMAIN, LGA_LINKS_DOMAIN and
+# COMPOSE_PROFILES=ops (backup + observability). First certificate: docs/OPS_SETUP.md step 3.
+services:
+  nginx:
+    ports: !override
+      - '80:80'
+      - '443:443'
+    environment:
+      NGINX_ENTRYPOINT_QUIET_LOGS: '1'
+      # Render templates/site.conf.template into /etc/nginx/site/site.conf, substituting only LGA_*.
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/site
+      NGINX_ENVSUBST_FILTER: ^LGA_
+      LGA_APP_DOMAIN: ${LGA_APP_DOMAIN:?set LGA_APP_DOMAIN in production.env}
+      LGA_LINKS_DOMAIN: ${LGA_LINKS_DOMAIN:?set LGA_LINKS_DOMAIN in production.env}
+    volumes: !override
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/http-common.conf:/etc/nginx/lga/http-common.conf:ro
+      - ../nginx/app-locations.conf:/etc/nginx/lga/app-locations.conf:ro
+      - ../nginx/templates:/etc/nginx/templates:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - acme-webroot:/var/www/certbot:ro
+    tmpfs: !override
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+      - /etc/nginx/site
+    # Pick up renewed certificates: reload every 6 h (cheap, no dropped connections).
+    command:
+      - sh
+      - -c
+      - while sleep 21600; do nginx -s reload; done & exec nginx -g 'daemon off;'
+
+  # Renews certificates twice a day through the webroot nginx serves on port 80.
+  certbot:
+    image: certbot/certbot:v5.9.0
+    restart: unless-stopped
+    entrypoint:
+      - sh
+      - -c
+      - trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme-webroot:/var/www/certbot
+    logging:
+      driver: local
+      options: { max-size: 5m, max-file: '2' }
+    deploy:
+      resources: { limits: { memory: 64m } }
+
+volumes:
+  letsencrypt:
+  acme-webroot:

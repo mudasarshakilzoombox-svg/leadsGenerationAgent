@@ -39,6 +39,9 @@ const baseShape = {
   /** Provider keys. Required in real mode for every provider the routing config names. */
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+  /** Error tracking (12-observability §4). Unset = Sentry off. */
+  SENTRY_DSN: z.url().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
 };
 
 export const baseServerEnvSchema = z.object(baseShape);

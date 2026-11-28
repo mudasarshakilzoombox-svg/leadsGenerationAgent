@@ -43,3 +43,4 @@ Format: lightweight MADR (Context → Decision → Alternatives → Consequences
 | [0037](ADR-0037-ai-gateway-implementation.md) | AI gateway implementation choices (P0.2) | Accepted | — |
 | [0038](ADR-0038-workspace-lifecycle-implementation.md) | Workspace lifecycle, purge path, reconcilers and the Bull Board guard (P0.4) | Accepted | — |
 | [0039](ADR-0039-quality-gates.md) | Quality gates: boundaries, ownership, Renovate, gitleaks, OpenAPI, Playwright (P0.5) | Accepted | — |
+| [0040](ADR-0040-production-operations.md) | Production operations: bootstrap, staging, release pipeline, observability, backups (P0.6) | Accepted | — |

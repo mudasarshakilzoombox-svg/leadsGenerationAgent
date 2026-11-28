@@ -19,6 +19,7 @@
     "@lga/shared": "workspace:*",
     "@lga/ui": "workspace:*",
     "@next/env": "16.4.6",
+    "@sentry/nextjs": "11.12.0",
     "@tanstack/react-query": "5.108.4",
     "geist": "1.9.2",
     "lucide-react": "1.81.0",

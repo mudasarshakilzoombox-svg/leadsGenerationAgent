@@ -14,6 +14,7 @@ import {
   NotificationDeliveryService,
   QueueRegistry,
   queuePrefix,
+  reportError,
   type ValkeyClient,
   type WorkerEnv,
 } from '@lga/core';
@@ -92,6 +93,16 @@ export class WorkerRuntime implements OnApplicationBootstrap, OnApplicationShutd
         { queue, jobId: job?.id, job: job?.name, attempt: job?.attemptsMade, err: error },
         'Job failed',
       );
+      // Report only the final failure (retries exhausted), with ids for correlation.
+      const finalAttempt = !job || job.attemptsMade >= (job.opts.attempts ?? 1);
+      if (finalAttempt) {
+        reportError(error, {
+          queue,
+          jobName: job?.name,
+          jobId: job?.id,
+          workspaceId: (job?.data as { workspaceId?: string | null } | undefined)?.workspaceId,
+        });
+      }
     });
     worker.on('error', (error) => this.logger.error({ queue, err: error }, 'Worker error'));
     this.workers.push(worker);

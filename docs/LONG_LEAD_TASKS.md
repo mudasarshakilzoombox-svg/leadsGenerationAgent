@@ -9,6 +9,7 @@ Setup work outside the codebase that takes days or weeks (reviews, verifications
 | Google Gmail API app + restricted-scope verification (CASA) | MBX-03 (Gmail mailboxes, V1) | 4–8 weeks | Later |
 | First BYOK data provider account | DISC-01 (Phase 2) | Days | Later |
 | Domains, Cloudflare DNS, transactional email (SES/Resend) | Production email | Days | Later |
+| Production setup: VPS, DNS, TLS, GitHub environments, B2 + age key, Sentry, Grafana Cloud, UptimeRobot ([OPS_SETUP.md](OPS_SETUP.md)) | First production release (Gate 1) | 1–2 days | To do |
 | Legal drafts reviewed by counsel (ToS, Privacy, DPA, AUP) | Launch | Weeks | Later |
 
 ## Google sign-in (AUTH-03)

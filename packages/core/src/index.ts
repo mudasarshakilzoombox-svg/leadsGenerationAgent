@@ -20,6 +20,7 @@ export * from './redis/redis.module.js';
 export * from './queue/jobs.js';
 export * from './queue/queue.module.js';
 export * from './health/health.js';
+export * from './observability/sentry.js';
 export * from './platform/billing/plans.js';
 export * from './platform/tenancy/permissions.js';
 export * from './platform/catalog-sync.js';

@@ -979,6 +979,19 @@ flowchart LR
 
 Hostinger VPS snapshots are a convenience, not the DR strategy.
 
+**As implemented (P0.6, ADR-0040):**
+- **Images:** five images (`web`, `api`, `worker`, `migrate`, `backup`) published to GHCR as
+  `<prefix>-<svc>:<sha>`, not one backend image.
+- **Compose:** `infra/docker/compose.prod.yml`, plus `compose.vps.yml` (TLS, certbot) on the
+  server, plus `compose.staging.yml` for staging.
+- **Staging:** server-only on `127.0.0.1:8081`.
+- **Release:** `.github/workflows/release.yml` runs on `v*` tags and calls
+  `infra/scripts/deploy.sh`, with automatic rollback.
+- **Retention:** follows ADR-0027 (35 daily / 12 weekly / 6 monthly).
+- **Bootstrap:** `infra/scripts/bootstrap-server.sh`.
+- **Runbooks:** `infra/runbooks/`.
+- **Owner steps:** `docs/OPS_SETUP.md`.
+
 ### 17.7 Server hardening (summary)
 
 SSH key-only access with root login disabled. `ufw` allows only 22 (ideally an IP allowlist), 80 and 443. fail2ban, unattended security upgrades and a non-root deploy user. Docker containers run non-root with `read_only` root filesystems where possible, `no-new-privileges` and minimal capabilities. Postgres and Valkey are never published to the host network. Full checklist in [SECURITY.md](SECURITY.md).

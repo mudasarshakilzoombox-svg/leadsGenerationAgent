@@ -14,6 +14,13 @@
 
 All agents run in one `observability` container (Alloy) with a 256 MB memory limit.
 
+**As implemented (P0.6, ADR-0040):** the vendors are Grafana Cloud (logs, host metrics, alerts),
+UptimeRobot and Sentry. One Alloy container (`infra/alloy/config.alloy`, profile `ops`) reads
+container logs through a read-only `docker-socket-proxy` and labels them with `level`,
+`service`, `event` and `env`. It also ships host metrics (disk, memory, swap, CPU). The alert
+rules are code: `infra/alloy/alerts.loki.yaml` and `alerts.prom.yaml`. The `/metrics` endpoints
+in §3 are still to come.
+
 ## 2. Logging
 
 ### 2.1 Format
@@ -82,6 +89,19 @@ nginx sets `X-Request-Id` (`$request_id`) if absent → api `RequestContext.requ
 - `beforeSend` scrubs with the same deny-list as §2.2. Request bodies and cookies are never attached. `sendDefaultPii: false`.
 - Grouping by `code` for `DomainError` (expected 4xx errors are not sent to Sentry, only 5xx and unexpected errors).
 - Frontend: errors and web vitals (LCP, INP), with 10% session traces and **no session replay** (privacy).
+
+**As implemented (P0.6, ADR-0040):**
+- **SDKs:** `@sentry/node` (api, worker: `packages/core/src/observability/sentry.ts`) and
+  `@sentry/nextjs` (web: `src/instrumentation*.ts`). Both are off without `SENTRY_DSN`.
+- **Data collection:** in Sentry v11 `dataCollection` replaces `sendDefaultPii`. Ours is strict:
+  no users, cookies, bodies, query strings or local variables.
+- **Scrubbing:** `beforeSend` and `beforeBreadcrumb` use `scrubEvent` / `scrubBreadcrumb` from
+  `@lga/shared`.
+- **What is reported:** the exception filter reports 5xx and unexpected errors only; the worker
+  reports a job's final failure.
+- **Proof:** `sentry.test.ts` sends a real event to a local sink and asserts that the fake email
+  arrives only as `[EMAIL]`.
+- **Gaps:** web source-map upload is a follow-up.
 
 ## 5. Health checks
 
